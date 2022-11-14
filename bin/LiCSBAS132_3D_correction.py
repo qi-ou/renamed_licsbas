@@ -100,10 +100,11 @@ def init_args():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=CustomFormatter)
     parser.add_argument('-f', dest='frame_dir', default="./", help="directory of LiCSBAS output of a particular frame")
     parser.add_argument('-c', dest='comp_cc_dir', default="GEOCml10GACOS", help="folder containing connected components and cc files")
-    parser.add_argument('-g', dest='unw_dir', default="GEOCml10GACOS", help="folder containing unw input to be corrected")
+    parser.add_argument('-d', dest='unw_dir', default="GEOCml10GACOS", help="folder containing unw input to be corrected")
     parser.add_argument('-r', dest='correct_dir', default="GEOCml10GACOS_corrected", help="folder for corrected unw")
     parser.add_argument('-t', dest='ts_dir', default="TS_GEOCml10GACOS", help="folder containing time series and residuals")
-    parser.add_argument('-s', dest='correction_thresh', help="threshold RMS residual per ifg as a fraction of 2 pi radian, override info/131resid_2pi.txt")
+    parser.add_argument('-s', dest='correction_thresh', help="RMS residual per ifg (in 2pi) for correction, override info/131resid_2pi.txt")
+    parser.add_argument('-g', dest='target_thresh', default='thresh', choices=['mode', 'median', 'mean', 'thresh'], help="RMS residual per ifg (in 2pi) for accepting the correction, read from info/131resid_2pi.txt")
     parser.add_argument('--suffix', default="", type=str, help="suffix of the input 131resid_2pi*.txt and outputs")
     args = parser.parse_args()
 
@@ -178,14 +179,14 @@ def get_para():
     resid_threshold_file = os.path.join(infodir, '131resid_2pi{}.txt'.format(args.suffix))
     if args.correction_thresh:
         correction_thresh = args.thresh
+        target_thresh = correction_thresh
     elif os.path.exists(resid_threshold_file):
         correction_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_thresh'))
-        target_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_mode'))
+        target_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_'+args.thresh))
     else:
         raise Exception("No input threshold or info/131resid_2pi*.txt file, quit...")
-        # thresh = 0.5
-        # else:
-    #     thresh = args.thresh
+
+
     print("Correction threshold = {:2f}".format(correction_thresh))
     print("Target threshold = {:2f}".format(target_thresh))
 
@@ -349,25 +350,25 @@ def plot_correction(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res
 def save_lists():
 
     #%% save ifg lists to text files.
-    bad_ifg_file = os.path.join(infodir, '132bad_ifg{}.txt'.format(args.suffix))
+    bad_ifg_file = os.path.join(infodir, '132bad_ifg{}_{:.2f}_{:.2f}.txt'.format(args.suffix, correction_thresh, target_thresh))
     if os.path.exists(bad_ifg_file): os.remove(bad_ifg_file)
     with open(bad_ifg_file, 'w') as f:
         for i in bad_ifg_not_corrected:
             print('{}'.format(i), file=f)
 
-    mode_ifg_file = os.path.join(infodir, '132corrected_by_component_mode_ifg{}.txt'.format(args.suffix))
+    mode_ifg_file = os.path.join(infodir, '132corrected_by_component_mode_ifg{}_{:.2f}_{:.2f}.txt'.format(args.suffix, correction_thresh, target_thresh))
     if os.path.exists(mode_ifg_file): os.remove(mode_ifg_file)
     with open(mode_ifg_file, 'w') as f:
         for i in ifg_corrected_by_mode:
             print('{}'.format(i), file=f)
 
-    nearest_ifg_file = os.path.join(infodir, '132corrected_by_nearest_integer_ifg{}.txt'.format(args.suffix))
+    nearest_ifg_file = os.path.join(infodir, '132corrected_by_nearest_integer_ifg{}_{:.2f}_{:.2f}.txt'.format(args.suffix, correction_thresh, target_thresh))
     if os.path.exists(nearest_ifg_file): os.remove(nearest_ifg_file)
     with open(nearest_ifg_file, 'w') as f:
         for i in ifg_corrected_by_integer:
             print('{}'.format(i), file=f)
 
-    good_ifg_file = os.path.join(infodir, '132good_ifg_uncorrected{}.txt'.format(args.suffix))
+    good_ifg_file = os.path.join(infodir, '132good_ifg_uncorrected{}_{:.2f}_{:.2f}.txt'.format(args.suffix, correction_thresh, target_thresh))
     if os.path.exists(good_ifg_file): os.remove(good_ifg_file)
     with open(good_ifg_file, 'w') as f:
         for i in good_ifg:
@@ -375,7 +376,6 @@ def save_lists():
 
 
 def plot_networks():
-
     ### Read date, network information and size
     retained_ifgs = good_ifg + ifg_corrected_by_mode + ifg_corrected_by_integer
     corrected_ifgs = ifg_corrected_by_mode + ifg_corrected_by_integer
@@ -392,24 +392,33 @@ def plot_networks():
     else: #dummy
         bperp = np.random.random(n_im).tolist()
 
-    pngfile = os.path.join(netdir, 'network132_only_good_without_correction{}.png'.format(args.suffix))
-    plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile, plot_bad=False)
+    pngfile = os.path.join(netdir, 'network132_only_good_without_correction{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
+    plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile, plot_corrected=False)
 
-    pngfile = os.path.join(netdir, 'network132_with_corrected{}.png'.format(args.suffix))
+    pngfile = os.path.join(netdir, 'network132_with_corrected{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
     plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile)
 
-    pngfile = os.path.join(netdir, 'network132_all{}.png'.format(args.suffix))
-    plot_lib.plot_corrected_network(retained_ifgs, bperp, [], pngfile)
+    pngfile = os.path.join(netdir, 'network132_all_retained{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
+    n_gap = plot_lib.plot_corrected_network(retained_ifgs, bperp, [], pngfile)
+
+    return n_gap
 
 
 def main():
+    global correction_thresh, target_thresh
     start()
     init_args()
     set_input_output()
     get_para()
     correction_decision()
     save_lists()
-    plot_networks()
+    n_gap = plot_networks()
+    while n_gap > 0:  # loosen correction and target thresholds until the network has no gap
+        correction_thresh += 0.1
+        target_thresh += 0.1
+        correction_decision()
+        save_lists()
+        n_gap = plot_networks()
     finish()
 
 
