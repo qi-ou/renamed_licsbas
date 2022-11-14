@@ -306,38 +306,34 @@ def plot_network(ifgdates, bperp, rm_ifgdates, pngfile, plot_bad=True):
 
 
 # %%
-def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_bad=True):
+def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_corrected=True):
     """
     Plot network of interferometric pairs.
 
     bperp can be dummy (-1~1).
     Suffix of pngfile can be png, ps, pdf, or svg.
     plot_bad
-        True  : Plot bad ifgs by red lines
-        False : Do not plot bad ifgs
+        True  : Plot corrected ifgs by red lines
+        False : Do not plot corrected ifgs
     """
 
     imdates_all = tools_lib.ifgdates2imdates(ifgdates)
     n_im_all = len(imdates_all)
     imdates_dt_all = np.array(([dt.datetime.strptime(imd, '%Y%m%d') for imd in imdates_all]))  ##datetime
 
-    ifgdates = list(set(ifgdates) - set(corrected_ifgdates))
-    ifgdates.sort()
-    imdates = tools_lib.ifgdates2imdates(ifgdates)
-    n_im = len(imdates)
-    imdates_dt = np.array(([dt.datetime.strptime(imd, '%Y%m%d') for imd in imdates]))  ##datetime
+    good_ifgdates = list(set(ifgdates) - set(corrected_ifgdates))
+    good_ifgdates.sort()
 
-    ### Identify gaps
-    G = inv_lib.make_sb_matrix(ifgdates)
-    ixs_inc_gap = np.where(G.sum(axis=0) == 0)[0]
+    imdates = tools_lib.ifgdates2imdates(ifgdates)
+    imdates_dt = np.array(([dt.datetime.strptime(imd, '%Y%m%d') for imd in imdates]))  ##datetime
 
     ### Plot fig
     figsize_x = np.round(((imdates_dt_all[-1] - imdates_dt_all[0]).days) / 80) + 2
     fig = plt.figure(figsize=(figsize_x, 6))
     ax = fig.add_axes([0.06, 0.12, 0.92, 0.85])
 
-    ### IFG blue lines
-    for i, ifgd in enumerate(ifgdates):
+    ### IFG good blue lines
+    for i, ifgd in enumerate(good_ifgdates):
         ix_m = imdates_all.index(ifgd[:8])
         ix_s = imdates_all.index(ifgd[-8:])
         label = 'IFG' if i == 0 else ''  # label only first
@@ -345,8 +341,8 @@ def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_ba
                                                                 bperp[ix_s]], color='b', alpha=0.6, zorder=2,
                  label=label)
 
-    ### IFG bad red lines
-    if plot_bad:
+    ### IFG corrected red lines
+    if plot_corrected:
         for i, ifgd in enumerate(corrected_ifgdates):
             ix_m = imdates_all.index(ifgd[:8])
             ix_s = imdates_all.index(ifgd[-8:])
@@ -365,7 +361,15 @@ def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_ba
         ax.annotate(imdates_all[i][4:6] + '/' + imdates_all[i][6:],
                     (imdates_dt_all[i], bperp[i]), ha='center', va=va, zorder=8)
 
-    ### gaps
+    ### Identify gaps
+    if plot_corrected:
+        G = inv_lib.make_sb_matrix(ifgdates)
+        ixs_inc_gap = np.where(G.sum(axis=0) == 0)[0]
+    else:
+        G = inv_lib.make_sb_matrix(good_ifgdates)
+        ixs_inc_gap = np.where(G.sum(axis=0) == 0)[0]
+
+    ### plot gaps
     if len(ixs_inc_gap) != 0:
         gap_dates_dt = []
         for ix_gap in ixs_inc_gap:
@@ -404,4 +408,6 @@ def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_ba
     ### Save
     plt.savefig(pngfile)
     plt.close()
+
+    return len(ixs_inc_gap)
 
