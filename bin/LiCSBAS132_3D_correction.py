@@ -419,10 +419,10 @@ def main():
     ifg_corrected_by_integer = []
     bad_ifg_not_corrected = []
 
-    # correction_decision()
-    # save_lists()
-    # n_gap = plot_networks()
-    n_gap = 1
+    correction_decision()
+    save_lists()
+    n_gap = plot_networks()
+
     while n_gap > 0:  # loosen correction and target thresholds until the network has no gap
         print("n_gap=" + str(n_gap)+", increase correction_thresh and target_thresh by 0.1")
         correction_thresh += 0.1
@@ -430,6 +430,7 @@ def main():
         correction_decision(bad_ifg_not_corrected)
         save_lists()
         n_gap = plot_networks()
+
     finish()
 
 
