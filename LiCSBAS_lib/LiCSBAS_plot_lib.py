@@ -331,9 +331,6 @@ def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_co
     good_ifgdates = list(set(ifgdates) - set(corrected_ifgdates))
     good_ifgdates.sort()
 
-    imdates = tools_lib.ifgdates2imdates(ifgdates)
-    imdates_dt = np.array(([dt.datetime.strptime(imd, '%Y%m%d') for imd in imdates]))  ##datetime
-
     ### Plot fig
     figsize_x = np.round(((imdates_dt_all[-1] - imdates_dt_all[0]).days) / 80) + 2
     fig = plt.figure(figsize=(figsize_x, 6))
@@ -372,9 +369,13 @@ def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_co
     if plot_corrected:
         G = inv_lib.make_sb_matrix(ifgdates)
         ixs_inc_gap = np.where(G.sum(axis=0) == 0)[0]
+        imdates = tools_lib.ifgdates2imdates(ifgdates)
+        imdates_dt = np.array(([dt.datetime.strptime(imd, '%Y%m%d') for imd in imdates]))  ##datetime
     else:
         G = inv_lib.make_sb_matrix(good_ifgdates)
         ixs_inc_gap = np.where(G.sum(axis=0) == 0)[0]
+        imdates = tools_lib.ifgdates2imdates(good_ifgdates)
+        imdates_dt = np.array(([dt.datetime.strptime(imd, '%Y%m%d') for imd in imdates]))  ##datetime
 
     ### plot gaps
     if len(ixs_inc_gap) != 0:
