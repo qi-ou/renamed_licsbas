@@ -42,7 +42,7 @@ import LiCSBAS_inv_lib as inv_lib
 
 
 #%%
-def make_im_png(data, pngfile, cmap, title, vmin=None, vmax=None, cbar=True):
+def make_im_png(data, pngfile, cmap, title, vmin=None, vmax=None, cbar=True, ref_window=[None, None, None, None]):
     """
     Make png image.
     cmap can be 'insar'. To wrap data, np.angle(np.exp(1j*x/cycle)*cycle)
@@ -65,6 +65,13 @@ def make_im_png(data, pngfile, cmap, title, vmin=None, vmax=None, cbar=True):
     plt.tight_layout()
     
     im = ax.imshow(data, vmin=vmin, vmax=vmax, cmap=cmap, interpolation=interp)
+
+    if ref_window[0] is not None:
+        x1 = ref_window[0]
+        x2 = ref_window[1]
+        y1 = ref_window[2]
+        y2 = ref_window[3]
+        ax.plot([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1], c='grey')
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_title(title)

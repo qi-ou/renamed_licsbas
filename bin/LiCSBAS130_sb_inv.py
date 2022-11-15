@@ -385,7 +385,8 @@ def main():
             print('All nan in ref area in {}.'.format(ifgd))
             preview_png = os.path.join(tsadir, ifgd+'.png')
             print('See {}.'.format(preview_png))
-            plot_lib.make_im_png(unwfile.reshape(length, width), preview_png, cmap_vel, ifgd, -wavelength / 2 * 1000, wavelength / 2 * 1000)
+            data = np.fromfile(unwfile, dtype=np.float32).reshape((length, width))*coef_r2m
+            plot_lib.make_im_png(data, preview_png, cmap_vel, ifgd, -wavelength / 2 * 1000, wavelength / 2 * 1000, ref_window=[refx1, refx2, refy1, refy2])
             print('Rerun LiCSBAS12.')
             exit
             # return 1
