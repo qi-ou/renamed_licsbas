@@ -424,7 +424,8 @@ def main():
         print("n_gap=" + str(n_gap)+", increase correction_thresh and target_thresh by 0.1")
         correction_thresh += 0.1
         target_thresh += 0.1
-        correction_decision(bad_ifg_not_corrected)
+        bad_ifg = io_lib.read_ifg_list('./TS_GEOCml10GACOS/info/132bad_ifg1_0.20_0.20.txt')
+        correction_decision(bad_ifg)
         save_lists()
         n_gap = plot_networks()
     finish()
