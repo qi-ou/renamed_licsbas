@@ -414,6 +414,7 @@ def main():
     save_lists()
     n_gap = plot_networks()
     while n_gap > 0:  # loosen correction and target thresholds until the network has no gap
+        print("n_gap=" + n_gap+", increase correction_thresh and target_thresh by 0.1")
         correction_thresh += 0.1
         target_thresh += 0.1
         correction_decision()
