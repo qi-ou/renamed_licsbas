@@ -182,7 +182,7 @@ def get_para():
         target_thresh = correction_thresh
     elif os.path.exists(resid_threshold_file):
         correction_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_thresh'))
-        target_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_'+args.thresh))
+        target_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_'+args.target_thresh))
     else:
         raise Exception("No input threshold or info/131resid_2pi*.txt file, quit...")
 
