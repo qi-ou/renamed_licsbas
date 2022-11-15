@@ -201,10 +201,7 @@ def get_para():
 def correction_decision(ifg_list=None):
     global bad_ifg_not_corrected, ifg_corrected_by_mode, ifg_corrected_by_integer, good_ifg
 
-    # set up empty ifg lists
-    # good_ifg = []
-    # ifg_corrected_by_mode = []
-    # ifg_corrected_by_integer = []
+    # keep bad_ifg_not_corrected empty at the start of each correction iteration
     bad_ifg_not_corrected = []
 
     # automatic correction
@@ -410,7 +407,7 @@ def plot_networks():
 
 
 def main():
-    global correction_thresh, target_thresh, good_ifg, ifg_corrected_by_mode, ifg_corrected_by_integer
+    global correction_thresh, target_thresh, good_ifg, ifg_corrected_by_mode, ifg_corrected_by_integer, bad_ifg_not_corrected
     start()
     init_args()
     set_input_output()
@@ -420,6 +417,7 @@ def main():
     good_ifg = []
     ifg_corrected_by_mode = []
     ifg_corrected_by_integer = []
+    bad_ifg_not_corrected = []
 
     # correction_decision()
     # save_lists()
