@@ -199,7 +199,7 @@ def get_para():
     ref_y = int((refy1 + refy2) / 2)
 
 
-def correction_decision():
+def correction_decision(ifg_list=None):
     global bad_ifg_not_corrected, ifg_corrected_by_mode, ifg_corrected_by_integer, good_ifg
 
     # set up empty ifg lists
@@ -209,7 +209,13 @@ def correction_decision():
     bad_ifg_not_corrected = []
 
     # automatic correction
-    for i in glob.glob(os.path.join(resdir, '*.res')):
+    if ifg_list is None:
+        res_list = glob.glob(os.path.join(resdir, '*.res'))
+    else:
+        res_list = [os.path.join(resdir, x+'.res') for x in ifg_list]
+        print(res_list)
+
+    for i in res_list:
         # read input res
         pair = os.path.basename(i).split('.')[0][-17:]
         print(pair)
@@ -410,14 +416,15 @@ def main():
     init_args()
     set_input_output()
     get_para()
-    correction_decision()
-    save_lists()
-    n_gap = plot_networks()
+    # correction_decision()
+    # save_lists()
+    # n_gap = plot_networks()
+    n_gap = 1
     while n_gap > 0:  # loosen correction and target thresholds until the network has no gap
-        print("n_gap=" + n_gap+", increase correction_thresh and target_thresh by 0.1")
+        print("n_gap=" + str(n_gap)+", increase correction_thresh and target_thresh by 0.1")
         correction_thresh += 0.1
         target_thresh += 0.1
-        correction_decision()
+        correction_decision(bad_ifg_not_corrected)
         save_lists()
         n_gap = plot_networks()
     finish()
