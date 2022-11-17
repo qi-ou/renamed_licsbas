@@ -213,9 +213,9 @@ def clip_normalise_combine_indices():
     block_rms_hgt[block_rms_hgt == 0] = np.nan
 
     ### clipping values at zigzagy edges which are the lowest for block sums and highest for std
-    block_unw[block_unw < np.nanpercentile(block_unw, 10)] = np.nanpercentile(block_unw, 10)
-    block_coh[block_coh < np.nanpercentile(block_coh, 10)] = np.nanpercentile(block_coh, 10)
-    block_con[block_con < np.nanpercentile(block_con, 10)] = np.nanpercentile(block_con, 10)
+    block_unw[block_unw < np.nanpercentile(block_unw, 5)] = np.nanpercentile(block_unw, 5)
+    block_coh[block_coh < np.nanpercentile(block_coh, 5)] = np.nanpercentile(block_coh, 5)
+    block_con[block_con < np.nanpercentile(block_con, 5)] = np.nanpercentile(block_con, 5)
     block_rms_hgt[block_rms_hgt > np.nanpercentile(block_rms_hgt, 90)] = np.nanpercentile(block_rms_hgt, 90)
 
     ### normalise with nan minmax
