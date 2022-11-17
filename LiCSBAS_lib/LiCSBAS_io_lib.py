@@ -144,6 +144,8 @@ def read_bperp_file(bperp_file, imdates):
     ### Determine type of bperp_file; old or not
     with open(bperp_file) as f:
         line = f.readline().split() #list
+        if not line.startswith("2"):
+            line = f.readline().split()  # find first line that starts with '2'
 
     if len(line) == 4: ## new format
         bperp_dict[line[0]] = '0.00' ## single prime. unnecessary?
