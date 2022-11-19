@@ -210,7 +210,7 @@ def perform_correction(ifg_list=None):
         res_list = glob.glob(os.path.join(resdir, '*.res'))
     else:
         res_list = [os.path.join(resdir, x+'.res') for x in ifg_list]
-        # print(res_list)
+    print(res_list)
 
     # multi-processing with correction_decision()
     if not args.n_para:
