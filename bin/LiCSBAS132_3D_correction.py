@@ -210,7 +210,7 @@ def perform_correction(ifg_list=None):
         res_list = glob.glob(os.path.join(resdir, '*.res'))
     else:
         res_list = [os.path.join(resdir, x+'.res') for x in ifg_list]
-    print(res_list)
+    # print(res_list)
 
     # multi-processing with correction_decision()
     if not args.n_para:
@@ -427,25 +427,28 @@ def plot_networks():
     corrected_ifgs = ifg_corrected_by_mode + ifg_corrected_by_integer
     retained_ifgs.sort()
     corrected_ifgs.sort()
-    imdates = tools_lib.ifgdates2imdates(retained_ifgs)
-    n_im = len(imdates)
+    if len(retained_ifgs) == 0:
+        n_gap = 1
+    else:
+        imdates = tools_lib.ifgdates2imdates(retained_ifgs)
+        n_im = len(imdates)
 
-    ### Plot network
-    ## Read bperp data or dummy
-    bperp_file = os.path.join(ccdir, 'baselines')
-    if os.path.exists(bperp_file):
-        bperp = io_lib.read_bperp_file(bperp_file, imdates)
-    else: #dummy
-        bperp = np.random.random(n_im).tolist()
+        ### Plot network
+        ## Read bperp data or dummy
+        bperp_file = os.path.join(ccdir, 'baselines')
+        if os.path.exists(bperp_file):
+            bperp = io_lib.read_bperp_file(bperp_file, imdates)
+        else: #dummy
+            bperp = np.random.random(n_im).tolist()
 
-    pngfile = os.path.join(netdir, 'network132_only_good_without_correction{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
-    plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile, plot_corrected=False)
+        pngfile = os.path.join(netdir, 'network132_only_good_without_correction{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
+        plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile, plot_corrected=False)
 
-    pngfile = os.path.join(netdir, 'network132_with_corrected{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
-    plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile)
+        pngfile = os.path.join(netdir, 'network132_with_corrected{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
+        plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile)
 
-    pngfile = os.path.join(netdir, 'network132_all_retained{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
-    n_gap = plot_lib.plot_corrected_network(retained_ifgs, bperp, [], pngfile)
+        pngfile = os.path.join(netdir, 'network132_all_retained{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
+        n_gap = plot_lib.plot_corrected_network(retained_ifgs, bperp, [], pngfile)
 
     return n_gap
 
