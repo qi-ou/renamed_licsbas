@@ -104,7 +104,7 @@ def init_args():
     parser.add_argument('-d', dest='unw_dir', default="GEOCml10GACOS", help="folder containing unw input to be corrected")
     parser.add_argument('-r', dest='correct_dir', default="GEOCml10GACOS_corrected", help="folder for corrected unw")
     parser.add_argument('-t', dest='ts_dir', default="TS_GEOCml10GACOS", help="folder containing time series and residuals")
-    parser.add_argument('-s', dest='correction_thresh', type=str, help="RMS residual per ifg (in 2pi) for correction, override info/131resid_2pi.txt")
+    parser.add_argument('-s', dest='correction_thresh', type=float, help="RMS residual per ifg (in 2pi) for correction, override info/131resid_2pi.txt")
     parser.add_argument('-g', dest='target_thresh', default='thresh', choices=['mode', 'median', 'mean', 'thresh'], help="RMS residual per ifg (in 2pi) for accepting the correction, read from info/131resid_2pi.txt")
     parser.add_argument('--suffix', default="", type=str, help="suffix of the input 131resid_2pi*.txt and outputs")
     parser.add_argument('-n', dest='n_para', type=int, help="number of processes for parallel processing")
