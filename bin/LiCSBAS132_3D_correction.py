@@ -188,8 +188,8 @@ def get_para():
     else:
         raise Exception("No input threshold or info/131resid_2pi*.txt file, quit...")
 
-    print("Correction threshold = {:2f}".format(correction_thresh))
-    print("Target threshold = {:2f}".format(target_thresh))
+    print("Correction threshold = {:.2f}".format(correction_thresh))
+    print("Target threshold = {:.2f}".format(target_thresh))
 
     # read reference for plotting purpose
     reffile = os.path.join(infodir, '120ref.txt')
