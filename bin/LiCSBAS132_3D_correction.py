@@ -180,7 +180,7 @@ def get_para():
     # read threshold value
     resid_threshold_file = os.path.join(infodir, '131resid_2pi{}.txt'.format(args.suffix))
     if args.correction_thresh:
-        correction_thresh = args.thresh
+        correction_thresh = args.correction_thresh
         target_thresh = correction_thresh
     elif os.path.exists(resid_threshold_file):
         correction_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_thresh'))
