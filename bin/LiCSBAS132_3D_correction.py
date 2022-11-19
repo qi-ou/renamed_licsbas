@@ -83,6 +83,7 @@ import LiCSBAS_io_lib as io_lib
 import LiCSBAS_tools_lib as tools_lib
 import LiCSBAS_plot_lib as plot_lib
 import shutil
+import multiprocessing as multi
 
 
 class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
@@ -106,6 +107,7 @@ def init_args():
     parser.add_argument('-s', dest='correction_thresh', help="RMS residual per ifg (in 2pi) for correction, override info/131resid_2pi.txt")
     parser.add_argument('-g', dest='target_thresh', default='thresh', choices=['mode', 'median', 'mean', 'thresh'], help="RMS residual per ifg (in 2pi) for accepting the correction, read from info/131resid_2pi.txt")
     parser.add_argument('--suffix', default="", type=str, help="suffix of the input 131resid_2pi*.txt and outputs")
+    parser.add_argument('-n', dest='n_para', type=int, help="number of processes for parallel processing")
     args = parser.parse_args()
 
 
@@ -198,9 +200,8 @@ def get_para():
     ref_y = int((refy1 + refy2) / 2)
 
 
-def correction_decision(ifg_list=None):
+def perform_correction(ifg_list=None):
     global bad_ifg_not_corrected, ifg_corrected_by_mode, ifg_corrected_by_integer, good_ifg
-
     # keep bad_ifg_not_corrected empty at the start of each correction iteration
     bad_ifg_not_corrected = []
 
@@ -209,7 +210,47 @@ def correction_decision(ifg_list=None):
         res_list = glob.glob(os.path.join(resdir, '*.res'))
     else:
         res_list = [os.path.join(resdir, x+'.res') for x in ifg_list]
-        print(res_list)
+        # print(res_list)
+
+    # multi-processing with correction_decision()
+    if not args.n_para:
+        try:
+            n_para = len(os.sched_getaffinity(0))
+        except:
+            n_para = multi.cpu_count()
+    else:
+        n_para = args.n_para
+
+    if n_para > 1 and len(res_list) > 100:
+        pool = multi.Pool(processes=n_para)
+        results = pool.map(correction_decision, even_split(res_list, n_para))
+        # compile results from different parallel processes
+        for bad_list, mode_list, int_list, good_list in results:
+            bad_ifg_not_corrected.extend(bad_list)
+            ifg_corrected_by_mode.extend(mode_list)
+            ifg_corrected_by_integer.extend(int_list)
+            good_ifg.extend(good_list)
+    else:
+        bad_list, mode_list, int_list, good_list = correction_decision(res_list)
+        bad_ifg_not_corrected.extend(bad_list)
+        ifg_corrected_by_mode.extend(mode_list)
+        ifg_corrected_by_integer.extend(int_list)
+        good_ifg.extend(good_list)
+
+
+def even_split(a, n):
+    """ Divide a list, a, in to n even parts"""
+    n = min(n, len(a)) # to avoid empty lists
+    k, m = divmod(len(a), n)
+    return [a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
+
+
+def correction_decision(res_list):
+    # # set up
+    bad_list = []
+    mode_list = []
+    int_list = []
+    good_list = []
 
     for i in res_list:
         # read input res
@@ -224,7 +265,7 @@ def correction_decision(ifg_list=None):
         res_rms = np.sqrt(np.nanmean(res_num_2pi ** 2))
 
         if res_rms < correction_thresh:
-            good_ifg.append(pair)
+            good_list.append(pair)
             print("RMS residual = {:.2f}, good...".format(res_rms))
 
             # define output dir
@@ -251,7 +292,7 @@ def correction_decision(ifg_list=None):
             res_integer = np.round(res_num_2pi)
             rms_res_integer_corrected = np.sqrt(np.nanmean((res_num_2pi - res_integer) ** 2))
             if rms_res_integer_corrected > target_thresh:
-                bad_ifg_not_corrected.append(pair)
+                bad_list.append(pair)
                 print("Integer reduces rms residuals to {:.2f}, still above threshold of {:.2f}, discard...".format(
                     rms_res_integer_corrected, target_thresh))
 
@@ -297,7 +338,7 @@ def correction_decision(ifg_list=None):
                             rms_res_mode_corrected, target_thresh))
                     unw_corrected = unw - res_mode * 2 * np.pi
                     correction_title = "Mode_corrected"
-                    ifg_corrected_by_mode.append(pair)
+                    mode_list.append(pair)
                     png_path = os.path.join(mode_png_dir, '{}.png'.format(pair))
 
                 else:  # if component mode is not useful
@@ -307,10 +348,11 @@ def correction_decision(ifg_list=None):
                         rms_res_integer_corrected))
                     unw_corrected = unw - res_integer * 2 * np.pi
                     correction_title = "Integer_corrected"
-                    ifg_corrected_by_integer.append(pair)
+                    int_list.append(pair)
                     png_path = os.path.join(integer_png_dir, '{}.png'.format(pair))
 
-                plot_correction(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res_mode, correction_title, res_rms, rms_res_integer_corrected, rms_res_mode_corrected, png_path)
+                plot_correction(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res_mode, correction_title,
+                                res_rms, rms_res_integer_corrected, rms_res_mode_corrected, png_path)
 
                 # define output dir
                 correct_pair_dir = os.path.join(correct_dir, pair)
@@ -319,6 +361,8 @@ def correction_decision(ifg_list=None):
                 # save the corrected unw
                 unw_corrected.flatten().tofile(os.path.join(correct_pair_dir, pair + '.unw'))
                 del con, unw, unw_corrected, res_num_2pi, res_integer, res_mm, res_rad, res_rms, correction_title
+
+    return bad_list, mode_list, int_list, good_list
 
 
 def plot_correction(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res_mode, correction_title, res_rms, rms_res_integer_corrected, rms_res_mode_corrected, png_path):
@@ -407,27 +451,27 @@ def plot_networks():
 
 
 def main():
-    global correction_thresh, target_thresh, good_ifg, ifg_corrected_by_mode, ifg_corrected_by_integer, bad_ifg_not_corrected
+    global correction_thresh, target_thresh, bad_ifg_not_corrected, ifg_corrected_by_mode, ifg_corrected_by_integer, good_ifg
     start()
     init_args()
     set_input_output()
     get_para()
 
-    # set up
-    good_ifg = []
+    # set up empty decision lists
     ifg_corrected_by_mode = []
     ifg_corrected_by_integer = []
+    good_ifg = []
     bad_ifg_not_corrected = []
 
-    correction_decision()
+    perform_correction()
     save_lists()
     n_gap = plot_networks()
 
     while n_gap > 0:  # loosen correction and target thresholds until the network has no gap
-        print("n_gap=" + str(n_gap)+", increase correction_thresh and target_thresh by 0.1")
-        correction_thresh += 0.1
-        target_thresh += 0.1
-        correction_decision(bad_ifg_not_corrected)
+        print("n_gap=" + str(n_gap)+", increase correction_thresh and target_thresh by 0.05")
+        correction_thresh += 0.05
+        target_thresh += 0.05
+        perform_correction(bad_ifg_not_corrected)
         save_lists()
         n_gap = plot_networks()
 
