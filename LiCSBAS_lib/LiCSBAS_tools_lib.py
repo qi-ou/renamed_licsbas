@@ -509,9 +509,14 @@ def separate_strong_and_weak_links(ifg_list):
     # iteratively drop weak ifgs associated with epochs with 1 or 2 links
     while np.min(counts) < 3:
         strong_epoch_list = epochs[counts > 2]
+        print(epochs)
+        print(counts)
+        print(strong_epoch_list)
         strong_primary_check = np.array([x in strong_epoch_list for x in primarylist])
         strong_secondary_check = np.array([x in strong_epoch_list for x in secondarylist])
         strong_ifg_check = np.logical_and(strong_primary_check, strong_secondary_check)
+        print(strong_primary_check)
+        print(strong_secondary_check)
         print(strong_ifg_check)
         primarylist = np.array(primarylist)[strong_ifg_check].tolist()
         secondarylist = np.array(secondarylist)[strong_ifg_check].tolist()
