@@ -508,18 +508,25 @@ def separate_strong_and_weak_links(ifg_list):
 
     # iteratively drop weak ifgs associated with epochs with 1 or 2 links
     while np.min(counts) < 3:
-        weak_epochs = epochs[counts < 3]
-        for weak_epoch in weak_epochs:
-            print("Check weak epoch: {}".format(weak_epoch))
-            # remove ifgs associated with weak epoch as primary epoch
-            check = [x != weak_epoch for x in primarylist]
-            print(check)
-            primarylist = primarylist[check]
-            secondarylist = secondarylist[check]
-            # remove ifgs associated with weak epoch as secondary epoch
-            check = [x != weak_epoch for x in secondarylist]
-            primarylist = primarylist[check]
-            secondarylist = secondarylist[check]
+        strong_epoch_list = epochs[counts > 2]
+        strong_primary_check = np.array([x in strong_epoch_list for x in primarylist])
+        strong_secondary_check = np.array([x in strong_epoch_list for x in secondarylist])
+        strong_ifg_check = np.logical_and(strong_primary_check, strong_secondary_check)
+        primarylist = primarylist[strong_ifg_check]
+        secondarylist = secondarylist[strong_ifg_check]
+
+        # for weak_epoch in weak_epochs:
+        #     print("Check weak epoch: {}".format(weak_epoch))
+        #     # remove ifgs associated with weak epoch as primary epoch
+        #     checklist = [x != weak_epoch for x in primarylist]
+        #     print(checklist)
+        #     primarylist = [primary for (primary, strong) in zip(primarylist, checklist) if strong]
+        #     secondarylist = [secondary for (secondary, strong) in zip(secondarylist, checklist) if strong]
+        #     secondarylist = secondarylist[check]
+        #     # remove ifgs associated with weak epoch as secondary epoch
+        #     checklist = [x != weak_epoch for x in secondarylist]
+        #     primarylist = [primary for (primary, strong) in zip(primarylist, checklist) if strong]
+        #     secondarylist = [secondary for (secondary, strong) in zip(secondarylist, checklist) if strong]
 
         epochs = primarylist + secondarylist
         epochs.sort()
