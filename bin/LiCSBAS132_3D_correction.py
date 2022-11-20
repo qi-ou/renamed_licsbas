@@ -604,7 +604,7 @@ def plot_masking(pair, unw, unw_masked, res_num_2pi, res_num_2pi_masked, png):
     ax[0, 0].set_title("Unw (rad)")
     ax[0, 1].set_title("Unw_masked")
     ax[1, 0].set_title("Residual in 2pi")
-    ax[1, 1].set_title("|Residual| < {:.2f})".format(args.mask_thresh))
+    ax[1, 1].set_title("|Residual| < {:.2f}".format(args.mask_thresh))
 
     fig.colorbar(im_unw, ax=ax[0, :], location='right', shrink=0.8)
     fig.colorbar(im_res, ax=ax[1, :], location='right', shrink=0.8)
