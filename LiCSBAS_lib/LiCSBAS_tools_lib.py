@@ -494,6 +494,43 @@ def ifgdates2imdates(ifgdates):
 
 
 #%%
+def separate_strong_and_weak_links(ifg_list):
+    """return a list of strong ifgs and a list of weak ifgs"""
+    primarylist = []
+    secondarylist = []
+    for pairs in ifg_list:
+        primarylist.append(pairs[:8])
+        secondarylist.append(pairs[-8:])
+
+    all_epochs = primarylist + secondarylist
+    all_epochs.sort()
+    epochs, counts = np.unique(all_epochs, return_counts=True)
+
+    # iteratively drop weak ifgs associated with epochs with 1 or 2 links
+    while np.min(counts) < 3:
+        weak_epochs = epochs[counts < 3]
+        for weak_epoch in weak_epochs:
+            # remove ifgs associated with weak epoch as primary epoch
+            check = primarylist != weak_epoch
+            primarylist = primarylist[check]
+            secondarylist = secondarylist[check]
+            # remove ifgs associated with weak epoch as secondary epoch
+            check = secondarylist != weak_epoch
+            primarylist = primarylist[check]
+            secondarylist = secondarylist[check]
+
+        epochs = primarylist + secondarylist
+        epochs.sort()
+        epochs, counts = np.unique(epochs, return_counts=True)
+
+    strong_ifgs = [p+'_'+s for p, s in zip(primarylist, secondarylist)]
+    weak_ifgs = list(set(ifg_list)-set(strong_ifgs))
+    weak_ifgs.sort()
+
+    return strong_ifgs, weak_ifgs
+
+
+#%%
 def multilook(array, nlook_r, nlook_c, n_valid_thre=0.5):
     """
     Nodata in input array must be filled with nan beforehand.

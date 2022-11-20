@@ -127,7 +127,7 @@ def finish():
     minite = int(np.mod((elapsed_time/60),60))
     sec = int(np.mod(elapsed_time,60))
     print("\nElapsed time: {0:02}h {1:02}m {2:02}s".format(hour,minite,sec))
-    print("\n{} {}".format(os.path.basename(sys.argv[0]), ' '.join(sys.argv[1:])), flush=True)
+    print("\n{} {} finished!".format(os.path.basename(sys.argv[0]), ' '.join(sys.argv[1:])), flush=True)
     print('Output directory: {}\n'.format(os.path.relpath(tsadir)))
 
 
@@ -422,6 +422,7 @@ def save_lists():
 
 
 def plot_networks():
+    """ plot networks with and without corrected ifgs, identify weak links, return n_gap if removing weak links"""
     ### Read date, network information and size
     retained_ifgs = good_ifg + ifg_corrected_by_mode + ifg_corrected_by_integer
     corrected_ifgs = ifg_corrected_by_mode + ifg_corrected_by_integer
@@ -447,10 +448,10 @@ def plot_networks():
         pngfile = os.path.join(netdir, 'network132_with_corrected{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
         plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile)
 
+        strong_links, weak_links = tools_lib.separate_strong_and_weak_links(retained_ifgs)
         pngfile = os.path.join(netdir, 'network132_all_retained{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
-        n_gap = plot_lib.plot_corrected_network(retained_ifgs, bperp, [], pngfile)
-
-    return n_gap
+        n_gap = plot_lib.plot_network(retained_ifgs, bperp, weak_links, pngfile, plot_bad=True, label_name='Weak Links')
+    return n_gap, strong_links
 
 
 def main():
@@ -468,15 +469,22 @@ def main():
 
     perform_correction()
     save_lists()
-    n_gap = plot_networks()
+    n_gap, strong_links = plot_networks()
 
-    while n_gap > 0:  # loosen correction and target thresholds until the network has no gap
+    while n_gap > 0:  # loosen correction and target thresholds until the network has no gap even after removing weak links
         print("n_gap=" + str(n_gap)+", increase correction_thresh and target_thresh by 0.05")
         correction_thresh += 0.05
         target_thresh += 0.05
         perform_correction(bad_ifg_not_corrected)
         save_lists()
-        n_gap = plot_networks()
+        n_gap, strong_links = plot_networks()
+
+    # save strong link ifgs to file
+    strong_ifg_file = os.path.join(infodir, '132strong_link_ifgs{}.txt'.format(args.suffix))
+    if os.path.exists(strong_ifg_file): os.remove(strong_ifg_file)
+    with open(strong_ifg_file, 'w') as f:
+        for i in strong_links:
+            print('{}'.format(i), file=f)
 
     finish()
 
