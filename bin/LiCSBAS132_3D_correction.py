@@ -553,8 +553,8 @@ def masking(res_list):
         # count coherence pixels for expected total n_unw
         ccfile = os.path.join(ccdir, pair, pair + '.cc')
         coh = io_lib.read_img(ccfile, length, width, np.uint8)
-        # coh[coh==0] = np.nan
-        print(coh)
+        coh = coh.astype(np.float32)
+        coh[coh==0] = np.nan
         cc_pixel_count = np.count_nonzero(~np.isnan(coh))
 
         # generate a mask using res, and make a masked_residual map (for plotting only)
@@ -573,7 +573,7 @@ def masking(res_list):
         unw_perc_list.append(unw_percentage)
 
         # plot masking
-        png_file = os.path_join(mask_png_dir, '{}.png'.format(pair))
+        png_file = os.path.join(mask_png_dir, '{}.png'.format(pair))
         plot_masking(pair, unw, unw_masked, res_num_2pi, res_num_2pi_masked, png_file)
 
         # output masked unw
