@@ -435,6 +435,7 @@ def plot_networks():
     if len(retained_ifgs) == 0 :
         n_gap = 1
         strong_links = [] # dummy
+        weak_links = [] # dummy
     else:
         strong_links, weak_links = tools_lib.separate_strong_and_weak_links(retained_ifgs)
         print("{} ifgs are well-connected".format(len(strong_links)))
@@ -442,6 +443,7 @@ def plot_networks():
         if len(strong_links) == 0:
             n_gap = 1
             strong_links = []  # dummy
+            weak_links = []  # dummy
         else:
             imdates = tools_lib.ifgdates2imdates(retained_ifgs)
             n_im = len(imdates)
@@ -462,7 +464,7 @@ def plot_networks():
 
             pngfile = os.path.join(netdir, 'network132_all_retained{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
             n_gap = plot_lib.plot_network(retained_ifgs, bperp, weak_links, pngfile, plot_bad=True, label_name='Weak Links')
-    return n_gap, strong_links
+    return n_gap, strong_links, weak_links
 
 
 def main():
@@ -480,7 +482,7 @@ def main():
 
     perform_correction()
     save_lists()
-    n_gap, strong_links = plot_networks()
+    n_gap, strong_links, weak_links = plot_networks()
 
     while n_gap > 0:  # loosen correction and target thresholds until the network has no gap even after removing weak links
         print("n_gap=" + str(n_gap)+", increase correction_thresh and target_thresh by 0.05")
@@ -493,7 +495,7 @@ def main():
 
         perform_correction(bad_ifg_not_corrected)
         save_lists()
-        n_gap, strong_links = plot_networks()
+        n_gap, strong_links, weak_links = plot_networks()
 
     # save strong link ifgs to file
     strong_ifg_file = os.path.join(infodir, '132strong_link_ifgs{}.txt'.format(args.suffix))
@@ -501,6 +503,14 @@ def main():
     with open(strong_ifg_file, 'w') as f:
         for i in strong_links:
             print('{}'.format(i), file=f)
+
+    # move weak ifgs to subfolder
+    weak_ifg_dir = os.path.join(correct_dir, "weak_links")
+    Path(weak_ifg_dir).mkdir(parents=True, exist_ok=True)
+    for pair in weak_links:
+        unw_folder = os.path.join(correct_dir, pair)
+        dest_folder = os.path.join(weak_ifg_dir, pair)
+        shutil.move(unw_folder, dest_folder)
 
     finish()
 
