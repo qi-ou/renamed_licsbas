@@ -434,6 +434,8 @@ def plot_networks():
         strong_links = [] # dummy
     else:
         strong_links, weak_links = tools_lib.separate_strong_and_weak_links(retained_ifgs)
+        print("{} ifgs are well-connected".format(len(strong_links)))
+        print("{} ifgs are weak links".format(len(weak_links)))
         if len(strong_links) == 0:
             n_gap = 1
             strong_links = []  # dummy
