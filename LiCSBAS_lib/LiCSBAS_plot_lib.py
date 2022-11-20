@@ -216,7 +216,7 @@ def plot_hgt_corr(data_bf, fit_hgt, hgt, title, pngfile):
 
 
 #%%
-def plot_network(ifgdates, bperp, rm_ifgdates, pngfile, plot_bad=True):
+def plot_network(ifgdates, bperp, rm_ifgdates, pngfile, plot_bad=True, label_name='Removed IFG'):
     """
     Plot network of interferometric pairs.
     
@@ -259,7 +259,7 @@ def plot_network(ifgdates, bperp, rm_ifgdates, pngfile, plot_bad=True):
         for i, ifgd in enumerate(rm_ifgdates):
             ix_m = imdates_all.index(ifgd[:8])
             ix_s = imdates_all.index(ifgd[-8:])
-            label = 'Removed IFG' if i==0 else '' #label only first
+            label = label_name if i==0 else '' #label only first
             plt.plot([imdates_dt_all[ix_m], imdates_dt_all[ix_s]], [bperp[ix_m],
                     bperp[ix_s]], color='r', alpha=0.6, zorder=6, label=label)
 
@@ -311,9 +311,11 @@ def plot_network(ifgdates, bperp, rm_ifgdates, pngfile, plot_bad=True):
     plt.savefig(pngfile)
     plt.close()
 
+    return len(ixs_inc_gap)
+
 
 # %%
-def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_corrected=True):
+def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_corrected=True, label_name='Corrected IFG'):
     """
     Plot network of interferometric pairs.
 
@@ -350,10 +352,10 @@ def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_co
         for i, ifgd in enumerate(corrected_ifgdates):
             ix_m = imdates_all.index(ifgd[:8])
             ix_s = imdates_all.index(ifgd[-8:])
-            label = 'Corrected IFG' if i == 0 else ''  # label only first
-            plt.plot([imdates_dt_all[ix_m], imdates_dt_all[ix_s]], [bperp[ix_m],
-                                                                    bperp[ix_s]], color='r', alpha=0.6, zorder=6,
-                     label=label)
+            label = label_name if i == 0 else ''  # label only first
+            plt.plot([imdates_dt_all[ix_m], imdates_dt_all[ix_s]],
+                     [bperp[ix_m], bperp[ix_s]],
+                     color='r', alpha=0.6, zorder=6, label=label)
 
     ### Image points and dates
     ax.scatter(imdates_dt_all, bperp, alpha=0.6, zorder=4)
@@ -418,4 +420,3 @@ def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_co
     plt.close()
 
     return len(ixs_inc_gap)
-
