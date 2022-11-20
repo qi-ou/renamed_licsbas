@@ -483,6 +483,11 @@ def main():
         print("n_gap=" + str(n_gap)+", increase correction_thresh and target_thresh by 0.05")
         correction_thresh += 0.05
         target_thresh += 0.05
+
+        print("Correction_thres = {}".format(correction_thresh))
+        print("Target_thres = {}".format(target_thresh))
+        print("Consider correcting {} bad ifgs".format(len(bad_ifg_not_corrected)))
+
         perform_correction(bad_ifg_not_corrected)
         save_lists()
         n_gap, strong_links = plot_networks()
