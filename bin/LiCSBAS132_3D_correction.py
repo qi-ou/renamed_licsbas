@@ -102,14 +102,15 @@ def init_args():
     parser.add_argument('-f', dest='frame_dir', default="./", help="directory of LiCSBAS output of a particular frame")
     parser.add_argument('-c', dest='comp_cc_dir', default="GEOCml10GACOS", help="folder containing connected components and cc files")
     parser.add_argument('-d', dest='unw_dir', default="GEOCml10GACOS", help="folder containing unw input to be corrected")
-    parser.add_argument('-r', dest='correct_dir', default="GEOCml10GACOS_corrected", help="folder for corrected unw")
+    parser.add_argument('-r', dest='out_dir', default="GEOCml10GACOS_corrected", help="folder for corrected/masked unw")
     parser.add_argument('-t', dest='ts_dir', default="TS_GEOCml10GACOS", help="folder containing time series and residuals")
     parser.add_argument('-s', dest='correction_thresh', type=float, help="RMS residual per ifg (in 2pi) for correction, override info/131resid_2pi.txt")
-    parser.add_argument('-g', dest='target_thresh', default='thresh', choices=['mode', 'median', 'mean', 'thresh'], help="RMS residual per ifg (in 2pi) for accepting the correction, read from info/131resid_2pi.txt")
+    parser.add_argument('-g', dest='target_thresh', default='thresh', choices=['mode', 'median', 'mean', 'thresh'], help="RMS residual per ifg (in 2pi) for accepting the correction, read from info/131resid_2pi.txt, or follow correction_thresh if given")
     parser.add_argument('--suffix', default="", type=str, help="suffix of the input 131resid_2pi*.txt and outputs")
     parser.add_argument('-n', dest='n_para', type=int, help="number of processes for parallel processing")
     parser.add_argument('--move_weak',  action='store_true', help="move ifgs forming weak links to subfolder of correct_dir")
-
+    parser.add_argument('--mask_by_residual',  action='store_true', help="perform masking instead of correction")
+    parser.add_argument('-m', dest='mask_thresh', type=float, default=0.2, help="RMS residual per ifg (in 2pi) for correction")
     args = parser.parse_args()
 
 
@@ -134,7 +135,7 @@ def finish():
 
 
 def set_input_output():
-    global ccdir, unwdir, tsadir, resdir, infodir, netdir, correct_dir, good_png_dir, bad_png_dir, integer_png_dir, mode_png_dir
+    global ccdir, unwdir, tsadir, resdir, infodir, netdir, correct_dir, good_png_dir, bad_png_dir, integer_png_dir, mode_png_dir, mask_png_dir, mask_dir
 
     # define input directories
     ccdir = os.path.abspath(os.path.join(args.frame_dir, args.comp_cc_dir))
@@ -146,25 +147,35 @@ def set_input_output():
     # define output directories
     netdir = os.path.join(tsadir, 'network')
 
-    correct_dir = os.path.abspath(os.path.join(args.frame_dir, args.correct_dir))
-    if os.path.exists(correct_dir): shutil.rmtree(correct_dir)
-    Path(correct_dir).mkdir(parents=True, exist_ok=True)
+    if args.mask_by_residual:
+        mask_dir = os.path.abspath(os.path.join(args.frame_dir, args.out_dir))
+        if os.path.exists(mask_dir): shutil.rmtree(mask_dir)
+        Path(mask_dir).mkdir(parents=True, exist_ok=True)
 
-    good_png_dir = os.path.join(resdir, 'good_ifg_no_correction/')
-    if os.path.exists(good_png_dir): shutil.rmtree(good_png_dir)
-    Path(good_png_dir).mkdir(parents=True, exist_ok=True)
+        mask_png_dir = os.path.join(resdir, 'mask_png/')
+        if os.path.exists(mask_png_dir): shutil.rmtree(mask_png_dir)
+        Path(mask_png_dir).mkdir(parents=True, exist_ok=True)
 
-    bad_png_dir = os.path.join(resdir, 'bad_ifg_no_correction/')
-    if os.path.exists(bad_png_dir): shutil.rmtree(bad_png_dir)
-    Path(bad_png_dir).mkdir(parents=True, exist_ok=True)
+    else:  # perform correction
+        correct_dir = os.path.abspath(os.path.join(args.frame_dir, args.out_dir))
+        if os.path.exists(correct_dir): shutil.rmtree(correct_dir)
+        Path(correct_dir).mkdir(parents=True, exist_ok=True)
 
-    integer_png_dir = os.path.join(resdir, 'integer_correction/')
-    if os.path.exists(integer_png_dir): shutil.rmtree(integer_png_dir)
-    Path(integer_png_dir).mkdir(parents=True, exist_ok=True)
+        good_png_dir = os.path.join(resdir, 'good_ifg_no_correction/')
+        if os.path.exists(good_png_dir): shutil.rmtree(good_png_dir)
+        Path(good_png_dir).mkdir(parents=True, exist_ok=True)
 
-    mode_png_dir = os.path.join(resdir, 'mode_correction/')
-    if os.path.exists(mode_png_dir): shutil.rmtree(mode_png_dir)
-    Path(mode_png_dir).mkdir(parents=True, exist_ok=True)
+        bad_png_dir = os.path.join(resdir, 'bad_ifg_no_correction/')
+        if os.path.exists(bad_png_dir): shutil.rmtree(bad_png_dir)
+        Path(bad_png_dir).mkdir(parents=True, exist_ok=True)
+
+        integer_png_dir = os.path.join(resdir, 'integer_correction/')
+        if os.path.exists(integer_png_dir): shutil.rmtree(integer_png_dir)
+        Path(integer_png_dir).mkdir(parents=True, exist_ok=True)
+
+        mode_png_dir = os.path.join(resdir, 'mode_correction/')
+        if os.path.exists(mode_png_dir): shutil.rmtree(mode_png_dir)
+        Path(mode_png_dir).mkdir(parents=True, exist_ok=True)
 
 
 def get_para():
@@ -179,20 +190,6 @@ def get_para():
     wavelength = speed_of_light/radar_frequency
     coef_r2m = -wavelength/4/np.pi*1000
 
-    # read threshold value
-    resid_threshold_file = os.path.join(infodir, '131resid_2pi{}.txt'.format(args.suffix))
-    if args.correction_thresh:
-        correction_thresh = args.correction_thresh
-        target_thresh = correction_thresh
-    elif os.path.exists(resid_threshold_file):
-        correction_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_thresh'))
-        target_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_'+args.target_thresh))
-    else:
-        raise Exception("No input threshold or info/131resid_2pi*.txt file, quit...")
-
-    print("Correction threshold = {:.2f}".format(correction_thresh))
-    print("Target threshold = {:.2f}".format(target_thresh))
-
     # read reference for plotting purpose
     reffile = os.path.join(infodir, '120ref.txt')
     with open(reffile, "r") as f:
@@ -200,6 +197,21 @@ def get_para():
     refx1, refx2, refy1, refy2 = [int(s) for s in re.split('[:/]', refarea)]
     ref_x = int((refx1 + refx2) / 2)
     ref_y = int((refy1 + refy2) / 2)
+
+    if not args.mask_by_residual:
+        # read threshold value
+        resid_threshold_file = os.path.join(infodir, '131resid_2pi{}.txt'.format(args.suffix))
+        if args.correction_thresh:
+            correction_thresh = args.correction_thresh
+            target_thresh = correction_thresh
+        elif os.path.exists(resid_threshold_file):
+            correction_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_thresh'))
+            target_thresh = float(io_lib.get_param_par(resid_threshold_file, 'RMS_'+args.target_thresh))
+        else:
+            raise Exception("No input threshold or info/131resid_2pi*.txt file, quit...")
+
+        print("Correction threshold = {:.2f}".format(correction_thresh))
+        print("Target threshold = {:.2f}".format(target_thresh))
 
 
 def perform_correction(ifg_list=None):
@@ -469,7 +481,7 @@ def plot_networks():
     return n_gap, strong_links, weak_links
 
 
-def main():
+def correction_main():
     global correction_thresh, target_thresh, bad_ifg_not_corrected, ifg_corrected_by_mode, ifg_corrected_by_integer, good_ifg
     start()
     init_args()
@@ -518,5 +530,120 @@ def main():
     finish()
 
 
+def perform_masking():
+
+    res_list = glob.glob(os.path.join(resdir, '*.res'))
+
+    # multi-processing with correction_decision()
+    if not args.n_para:
+        try:
+            n_para = len(os.sched_getaffinity(0))
+        except:
+            n_para = multi.cpu_count()
+    else:
+        n_para = args.n_para
+
+    if len(res_list) == 0:
+        sys.exit('No ifgs for correcting...\nCheck if there are *res files in the directory {}'.format(resdir))
+
+    if n_para > 1 and len(res_list) > 20:
+        pool = multi.Pool(processes=n_para)
+        results = pool.map(masking, even_split(res_list, n_para))
+        perc_list = np.concatenate(results)
+    else:
+        perc_list = masking(res_list)
+    return perc_list
+
+
+def masking(res_list):
+    unw_perc_list = []
+    for i in res_list:
+        pair = os.path.basename(i).split('.')[0][-17:]
+        print(pair)
+        unwfile = os.path.join(unwdir, pair, pair + '.unw')
+        unw = np.fromfile(unwfile, dtype=np.float32).reshape((length, width))
+
+        # count coherence pixels for expected total n_unw
+        ccfile = os.path.join(ccdir, pair, pair + '.cc')
+        coh = io_lib.read_img(ccfile, length, width, np.uint8)
+        coh[coh==0] = np.nan
+        cc_pixel_count = np.count_nonzero(~np.isnan(coh))
+
+        # generate a mask using res, and make a masked_residual map (for plotting only)
+        res_mm = np.fromfile(i, dtype=np.float32).reshape((length, width))
+        res_rad = res_mm / coef_r2m
+        res_num_2pi = res_rad / 2 / np.pi
+        mask = abs(res_num_2pi) > args.mask_thresh
+        res_num_2pi_masked = copy.copy(res_num_2pi)
+        res_num_2pi_masked[mask] = np.nan
+
+        # mask unw and calculate percentage unwrap
+        unw_masked = copy.copy(unw)
+        unw_masked[mask] = np.nan
+        unw_masked_pixel_count = np.count_nonzero(~np.isnan(unw_masked))
+        unw_percentage = unw_masked_pixel_count/cc_pixel_count * 100
+        unw_perc_list.append(unw_percentage)
+
+        # plotting
+        fig, ax = plt.subplots(2, 2, figsize=(9, 6))
+        fig.suptitle(pair)
+        for x in ax.flatten():
+            x.axes.xaxis.set_ticklabels([])
+            x.axes.yaxis.set_ticklabels([])
+
+        unw_vmin = np.nanpercentile(unw, 0.5)
+        unw_vmax = np.nanpercentile(unw, 99.5)
+
+        im_unw = ax[0,0].imshow(unw, vmin=unw_vmin, vmax=unw_vmax, cmap=cm.RdBu, interpolation='nearest')
+        im_unw = ax[0,1].imshow(unw_masked, vmin=unw_vmin, vmax=unw_vmax, cmap=cm.RdBu, interpolation='nearest')
+        im_res = ax[1,0].imshow(res_num_2pi, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+        im_res = ax[1,1].imshow(res_num_2pi_masked, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+
+        ax[0,0].set_title("Unw (rad)")
+        ax[0,1].set_title("Unw_masked")
+        ax[1,0].set_title("Residual in 2pi")
+        ax[1,1].set_title("|Residual| < {:.2f})".format(args.mask_thresh))
+
+        fig.colorbar(im_unw, ax=ax[0,:], location='right', shrink=0.8)
+        fig.colorbar(im_res, ax=ax[1,:], location='right', shrink=0.8)
+
+        plt.savefig(os.path_join(mask_png_dir, '{}.png'.format(pair)), dpi=300, bbox_inches='tight')
+        plt.close()
+
+        # define output dir
+        mask_pair_dir = os.path.join(mask_dir, pair)
+        Path(mask_pair_dir).mkdir(parents=True, exist_ok=True)
+
+        unw_masked.flatten().tofile(os.path.join(mask_pair_dir, pair + '.unw'))
+        del unw, unw_masked, res_mm, res_rad, res_num_2pi, mask, res_num_2pi_masked
+    return unw_perc_list
+
+
+def mask_main():
+    start()
+    init_args()
+    set_input_output()
+    get_para()
+
+    perc_list = perform_masking()
+
+    # plot coloured networks
+    ifgdates = tools_lib.get_ifgdates(args.out_dir)
+    imdates = tools_lib.ifgdates2imdates(ifgdates)
+    bperp_file = os.path.join(ccdir, 'baselines')
+    if os.path.exists(bperp_file):
+        bperp = io_lib.read_bperp_file(bperp_file, imdates)
+    else:  # dummy
+        n_im = len(imdates)
+        bperp = np.random.random(n_im).tolist()
+    pngfile = os.path.join(netdir, 'network132_masked{}_{}.png'.format(args.suffix, args.mask_thresh))
+    plot_lib.plot_coloured_network(ifgdates, bperp, perc_list, pngfile)
+
+    finish()
+
+
 if __name__ == "__main__":
-    main()
+    if args.mask_by_residual:
+        mask_main()
+    else:
+        correction_main()
