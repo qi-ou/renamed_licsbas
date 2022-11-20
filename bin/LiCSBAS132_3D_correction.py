@@ -430,6 +430,7 @@ def plot_networks():
     corrected_ifgs.sort()
     if len(retained_ifgs) == 0:
         n_gap = 1
+        strong_links = [] # dummy
     else:
         imdates = tools_lib.ifgdates2imdates(retained_ifgs)
         n_im = len(imdates)
