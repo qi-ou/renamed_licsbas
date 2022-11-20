@@ -483,10 +483,6 @@ def plot_networks():
 
 def correction_main():
     global correction_thresh, target_thresh, bad_ifg_not_corrected, ifg_corrected_by_mode, ifg_corrected_by_integer, good_ifg
-    start()
-    init_args()
-    set_input_output()
-    get_para()
 
     # set up empty decision lists
     ifg_corrected_by_mode = []
@@ -511,13 +507,6 @@ def correction_main():
         save_lists()
         n_gap, strong_links, weak_links = plot_networks()
 
-    # save strong link ifgs to file
-    strong_ifg_file = os.path.join(infodir, '132strong_link_ifgs{}.txt'.format(args.suffix))
-    if os.path.exists(strong_ifg_file): os.remove(strong_ifg_file)
-    with open(strong_ifg_file, 'w') as f:
-        for i in strong_links:
-            print('{}'.format(i), file=f)
-
     if args.move_weak:
         # move weak ifgs to subfolder
         weak_ifg_dir = os.path.join(correct_dir, "weak_links")
@@ -526,8 +515,6 @@ def correction_main():
             unw_folder = os.path.join(correct_dir, pair)
             dest_folder = os.path.join(weak_ifg_dir, pair)
             shutil.move(unw_folder, dest_folder)
-
-    finish()
 
 
 def perform_masking():
@@ -584,49 +571,48 @@ def masking(res_list):
         unw_percentage = unw_masked_pixel_count/cc_pixel_count * 100
         unw_perc_list.append(unw_percentage)
 
-        # plotting
-        fig, ax = plt.subplots(2, 2, figsize=(9, 6))
-        fig.suptitle(pair)
-        for x in ax.flatten():
-            x.axes.xaxis.set_ticklabels([])
-            x.axes.yaxis.set_ticklabels([])
+        # plot masking
+        png_file = os.path_join(mask_png_dir, '{}.png'.format(pair))
+        plot_masking(pair, unw, unw_masked, res_num_2pi, res_num_2pi_masked, png_file)
 
-        unw_vmin = np.nanpercentile(unw, 0.5)
-        unw_vmax = np.nanpercentile(unw, 99.5)
-
-        im_unw = ax[0,0].imshow(unw, vmin=unw_vmin, vmax=unw_vmax, cmap=cm.RdBu, interpolation='nearest')
-        im_unw = ax[0,1].imshow(unw_masked, vmin=unw_vmin, vmax=unw_vmax, cmap=cm.RdBu, interpolation='nearest')
-        im_res = ax[1,0].imshow(res_num_2pi, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
-        im_res = ax[1,1].imshow(res_num_2pi_masked, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
-
-        ax[0,0].set_title("Unw (rad)")
-        ax[0,1].set_title("Unw_masked")
-        ax[1,0].set_title("Residual in 2pi")
-        ax[1,1].set_title("|Residual| < {:.2f})".format(args.mask_thresh))
-
-        fig.colorbar(im_unw, ax=ax[0,:], location='right', shrink=0.8)
-        fig.colorbar(im_res, ax=ax[1,:], location='right', shrink=0.8)
-
-        plt.savefig(os.path_join(mask_png_dir, '{}.png'.format(pair)), dpi=300, bbox_inches='tight')
-        plt.close()
-
-        # define output dir
+        # output masked unw
         mask_pair_dir = os.path.join(mask_dir, pair)
         Path(mask_pair_dir).mkdir(parents=True, exist_ok=True)
-
         unw_masked.flatten().tofile(os.path.join(mask_pair_dir, pair + '.unw'))
+
         del unw, unw_masked, res_mm, res_rad, res_num_2pi, mask, res_num_2pi_masked
     return unw_perc_list
 
 
-def mask_main():
-    start()
-    init_args()
-    set_input_output()
-    get_para()
+def plot_masking(pair, unw, unw_masked, res_num_2pi, res_num_2pi_masked, png):
+    # plotting
+    fig, ax = plt.subplots(2, 2, figsize=(9, 6))
+    fig.suptitle(pair)
+    for x in ax.flatten():
+        x.axes.xaxis.set_ticklabels([])
+        x.axes.yaxis.set_ticklabels([])
 
-    perc_list = perform_masking()
+    unw_vmin = np.nanpercentile(unw, 0.5)
+    unw_vmax = np.nanpercentile(unw, 99.5)
 
+    im_unw = ax[0, 0].imshow(unw, vmin=unw_vmin, vmax=unw_vmax, cmap=cm.RdBu, interpolation='nearest')
+    im_unw = ax[0, 1].imshow(unw_masked, vmin=unw_vmin, vmax=unw_vmax, cmap=cm.RdBu, interpolation='nearest')
+    im_res = ax[1, 0].imshow(res_num_2pi, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+    im_res = ax[1, 1].imshow(res_num_2pi_masked, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+
+    ax[0, 0].set_title("Unw (rad)")
+    ax[0, 1].set_title("Unw_masked")
+    ax[1, 0].set_title("Residual in 2pi")
+    ax[1, 1].set_title("|Residual| < {:.2f})".format(args.mask_thresh))
+
+    fig.colorbar(im_unw, ax=ax[0, :], location='right', shrink=0.8)
+    fig.colorbar(im_res, ax=ax[1, :], location='right', shrink=0.8)
+
+    plt.savefig(png, dpi=300, bbox_inches='tight')
+    plt.close()
+
+
+def plot_network_with_unw_perc(perc_list):
     # plot coloured networks
     ifgdates = tools_lib.get_ifgdates(args.out_dir)
     imdates = tools_lib.ifgdates2imdates(ifgdates)
@@ -639,11 +625,21 @@ def mask_main():
     pngfile = os.path.join(netdir, 'network132_masked{}_{}.png'.format(args.suffix, args.mask_thresh))
     plot_lib.plot_coloured_network(ifgdates, bperp, perc_list, pngfile)
 
+
+def main():
+    start()
+    init_args()
+    set_input_output()
+    get_para()
+
+    if args.mask_by_residual:
+        perc_list = perform_masking()
+        plot_network_with_unw_perc(perc_list)
+    else:
+        correction_main()
+
     finish()
 
 
 if __name__ == "__main__":
-    if args.mask_by_residual:
-        mask_main()
-    else:
-        correction_main()
+    main()
