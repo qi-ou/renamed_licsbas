@@ -428,30 +428,35 @@ def plot_networks():
     corrected_ifgs = ifg_corrected_by_mode + ifg_corrected_by_integer
     retained_ifgs.sort()
     corrected_ifgs.sort()
-    if len(retained_ifgs) == 0:
+
+    if len(retained_ifgs) == 0 :
         n_gap = 1
         strong_links = [] # dummy
     else:
-        imdates = tools_lib.ifgdates2imdates(retained_ifgs)
-        n_im = len(imdates)
-
-        ### Plot network
-        ## Read bperp data or dummy
-        bperp_file = os.path.join(ccdir, 'baselines')
-        if os.path.exists(bperp_file):
-            bperp = io_lib.read_bperp_file(bperp_file, imdates)
-        else: #dummy
-            bperp = np.random.random(n_im).tolist()
-
-        pngfile = os.path.join(netdir, 'network132_only_good_without_correction{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
-        plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile, plot_corrected=False)
-
-        pngfile = os.path.join(netdir, 'network132_with_corrected{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
-        plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile)
-
         strong_links, weak_links = tools_lib.separate_strong_and_weak_links(retained_ifgs)
-        pngfile = os.path.join(netdir, 'network132_all_retained{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
-        n_gap = plot_lib.plot_network(retained_ifgs, bperp, weak_links, pngfile, plot_bad=True, label_name='Weak Links')
+        if len(strong_links) == 0:
+            n_gap = 1
+            strong_links = []  # dummy
+        else:
+            imdates = tools_lib.ifgdates2imdates(retained_ifgs)
+            n_im = len(imdates)
+
+            ### Plot network
+            ## Read bperp data or dummy
+            bperp_file = os.path.join(ccdir, 'baselines')
+            if os.path.exists(bperp_file):
+                bperp = io_lib.read_bperp_file(bperp_file, imdates)
+            else: #dummy
+                bperp = np.random.random(n_im).tolist()
+
+            pngfile = os.path.join(netdir, 'network132_only_good_without_correction{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
+            plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile, plot_corrected=False)
+
+            pngfile = os.path.join(netdir, 'network132_with_corrected{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
+            plot_lib.plot_corrected_network(retained_ifgs, bperp, corrected_ifgs, pngfile)
+
+            pngfile = os.path.join(netdir, 'network132_all_retained{}_{:.2f}_{:.2f}.png'.format(args.suffix, correction_thresh, target_thresh))
+            n_gap = plot_lib.plot_network(retained_ifgs, bperp, weak_links, pngfile, plot_bad=True, label_name='Weak Links')
     return n_gap, strong_links
 
 
