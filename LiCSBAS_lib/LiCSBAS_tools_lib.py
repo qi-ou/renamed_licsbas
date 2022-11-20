@@ -507,11 +507,8 @@ def separate_strong_and_weak_links(ifg_list):
     epochs, counts = np.unique(all_epochs, return_counts=True)
 
     # iteratively drop weak ifgs associated with epochs with 1 or 2 links
-    while np.min(counts) < 3:
+    while len(epochs) > 0 and np.min(counts) < 3:
         strong_epoch_list = epochs[counts > 2]
-        print(epochs)
-        print(counts)
-        print(strong_epoch_list)
         strong_primary_check = np.array([x in strong_epoch_list for x in primarylist])
         strong_secondary_check = np.array([x in strong_epoch_list for x in secondarylist])
         strong_ifg_check = np.logical_and(strong_primary_check, strong_secondary_check)
@@ -521,26 +518,17 @@ def separate_strong_and_weak_links(ifg_list):
         primarylist = np.array(primarylist)[strong_ifg_check].tolist()
         secondarylist = np.array(secondarylist)[strong_ifg_check].tolist()
 
-        # for weak_epoch in weak_epochs:
-        #     print("Check weak epoch: {}".format(weak_epoch))
-        #     # remove ifgs associated with weak epoch as primary epoch
-        #     checklist = [x != weak_epoch for x in primarylist]
-        #     print(checklist)
-        #     primarylist = [primary for (primary, strong) in zip(primarylist, checklist) if strong]
-        #     secondarylist = [secondary for (secondary, strong) in zip(secondarylist, checklist) if strong]
-        #     secondarylist = secondarylist[check]
-        #     # remove ifgs associated with weak epoch as secondary epoch
-        #     checklist = [x != weak_epoch for x in secondarylist]
-        #     primarylist = [primary for (primary, strong) in zip(primarylist, checklist) if strong]
-        #     secondarylist = [secondary for (secondary, strong) in zip(secondarylist, checklist) if strong]
-
         epochs = primarylist + secondarylist
         epochs.sort()
         epochs, counts = np.unique(epochs, return_counts=True)
 
-    strong_ifgs = [p+'_'+s for p, s in zip(primarylist, secondarylist)]
-    weak_ifgs = list(set(ifg_list)-set(strong_ifgs))
-    weak_ifgs.sort()
+    if len(epochs) > 0:
+        strong_ifgs = [p+'_'+s for p, s in zip(primarylist, secondarylist)]
+        weak_ifgs = list(set(ifg_list)-set(strong_ifgs))
+        weak_ifgs.sort()
+    else:
+        strong_ifgs = []
+        weak_ifgs = ifg_list
 
     return strong_ifgs, weak_ifgs
 
