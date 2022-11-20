@@ -308,7 +308,7 @@ def plot_network(ifgdates, bperp, rm_ifgdates, pngfile, plot_bad=True, label_nam
     plt.legend()
 
     ### Save
-    plt.savefig(pngfile)
+    plt.savefig(pngfile, bbox_inches='tight')
     plt.close()
 
     return len(ixs_inc_gap)
@@ -416,7 +416,7 @@ def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_co
     plt.legend()
 
     ### Save
-    plt.savefig(pngfile)
+    plt.savefig(pngfile, bbox_inches='tight')
     plt.close()
 
     return len(ixs_inc_gap)
@@ -499,6 +499,6 @@ def plot_coloured_network(ifgdates, bperp, perc_list, pngfile):
     plt.legend()
 
     ### Save
-    plt.savefig(pngfile)
+    plt.savefig(pngfile, bbox_inches='tight')
     plt.close()
 
