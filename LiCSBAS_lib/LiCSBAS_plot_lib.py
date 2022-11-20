@@ -420,3 +420,85 @@ def plot_corrected_network(ifgdates, bperp, corrected_ifgdates, pngfile, plot_co
     plt.close()
 
     return len(ixs_inc_gap)
+
+
+def plot_coloured_network(ifgdates, bperp, perc_list, pngfile):
+    """Plot network with link colour controlled by perc_list."""
+
+    imdates_all = tools_lib.ifgdates2imdates(ifgdates)
+    n_im_all = len(imdates_all)
+    imdates_dt_all = np.array(([dt.datetime.strptime(imd, '%Y%m%d') for imd in imdates_all]))  ##datetime
+
+    ### Plot fig
+    figsize_x = np.round(((imdates_dt_all[-1] - imdates_dt_all[0]).days) / 80) + 2
+    fig = plt.figure(figsize=(figsize_x, 6))
+    ax = fig.add_axes([0.06, 0.12, 0.92, 0.85])
+
+    # colorbar to change line colour according to unw pixel percentage
+    cmap = plt.cm.ScalarMappable(cmap='hot_r', norm=plt.Normalize(vmin=0, vmax=100))
+    cmap.set_array([])
+
+    ### IFG good blue lines
+    for i, ifgd in enumerate(ifgdates):
+        ix_m = imdates_all.index(ifgd[:8])
+        ix_s = imdates_all.index(ifgd[-8:])
+        label = 'IFG' if i == 0 else ''  # label only first
+        plt.plot([imdates_dt_all[ix_m], imdates_dt_all[ix_s]], [bperp[ix_m], bperp[ix_s]], color=cmap.to_rgba(perc_list[i]), alpha=0.6, zorder=2, label=label)
+    plt.colorbar(cmap, label='Pixel Percentage in Masked Unw')
+
+    ### Image points and dates
+    ax.scatter(imdates_dt_all, bperp, alpha=0.6, zorder=4)
+    for i in range(n_im_all):
+        if bperp[i] > np.median(bperp):
+            va = 'bottom'
+        else:
+            va = 'top'
+        ax.annotate(imdates_all[i][4:6] + '/' + imdates_all[i][6:],
+                    (imdates_dt_all[i], bperp[i]), ha='center', va=va, zorder=8)
+
+    ### Identify gaps
+    G = inv_lib.make_sb_matrix(ifgdates)
+    ixs_inc_gap = np.where(G.sum(axis=0) == 0)[0]
+    imdates = tools_lib.ifgdates2imdates(ifgdates)
+    imdates_dt = np.array(([dt.datetime.strptime(imd, '%Y%m%d') for imd in imdates]))  ##datetime
+
+    ### plot gaps
+    if len(ixs_inc_gap) != 0:
+        gap_dates_dt = []
+        for ix_gap in ixs_inc_gap:
+            ddays_td = imdates_dt[ix_gap + 1] - imdates_dt[ix_gap]
+            gap_dates_dt.append(imdates_dt[ix_gap] + ddays_td / 2)
+        plt.vlines(gap_dates_dt, 0, 1, transform=ax.get_xaxis_transform(),
+                   zorder=1, label='Gap', alpha=0.6, colors='k', linewidth=3)
+
+    ### Locater
+    loc = ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+    try:  # Only support from Matplotlib 3.1
+        ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(loc))
+    except:
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m/%d'))
+        for label in ax.get_xticklabels():
+            label.set_rotation(20)
+            label.set_horizontalalignment('right')
+    ax.grid(b=True, which='major')
+
+    ### Add bold line every 1yr
+    ax.xaxis.set_minor_locator(mdates.YearLocator())
+    ax.grid(b=True, which='minor', linewidth=2)
+
+    ax.set_xlim((imdates_dt_all[0] - dt.timedelta(days=10),
+                 imdates_dt_all[-1] + dt.timedelta(days=10)))
+
+    ### Labels and legend
+    plt.xlabel('Time')
+    if np.all(np.abs(np.array(bperp)) <= 1):  ## dummy
+        plt.ylabel('dummy')
+    else:
+        plt.ylabel('Bperp [m]')
+
+    plt.legend()
+
+    ### Save
+    plt.savefig(pngfile)
+    plt.close()
+
