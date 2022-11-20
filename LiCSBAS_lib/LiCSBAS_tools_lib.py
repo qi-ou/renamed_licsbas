@@ -510,12 +510,14 @@ def separate_strong_and_weak_links(ifg_list):
     while np.min(counts) < 3:
         weak_epochs = epochs[counts < 3]
         for weak_epoch in weak_epochs:
+            print("Check weak epoch: {}".format(weak_epoch))
             # remove ifgs associated with weak epoch as primary epoch
-            check = primarylist != weak_epoch
+            check = [x != weak_epoch for x in primarylist]
+            print(check)
             primarylist = primarylist[check]
             secondarylist = secondarylist[check]
             # remove ifgs associated with weak epoch as secondary epoch
-            check = secondarylist != weak_epoch
+            check = [x != weak_epoch for x in secondarylist]
             primarylist = primarylist[check]
             secondarylist = secondarylist[check]
 
