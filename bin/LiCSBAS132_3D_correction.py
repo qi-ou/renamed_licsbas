@@ -221,6 +221,9 @@ def perform_correction(ifg_list=None):
     else:
         n_para = args.n_para
 
+    if len(res_list) == 0:
+        sys.exit('No ifgs for correcting...\nCheck if there are *res files in the directory {}'.format(resdir))
+
     if n_para > 1 and len(res_list) > 100:
         pool = multi.Pool(processes=n_para)
         results = pool.map(correction_decision, even_split(res_list, n_para))
