@@ -186,7 +186,7 @@ def run_131(current_iter):
 
 
 def run_132(before_dir, after_dir, current_iter):
-    os.system('LiCSBAS132_3D_correction.py -c {} -d {} -r {} -t {} --suffix {} '.format(
+    os.system('LiCSBAS132_3D_correction.py -c {} -d {} -r {} -t {} --suffix {} --move_weak'.format(
         ccdir, before_dir, after_dir, args.ts_dir, int(current_iter)))
 
 

@@ -108,6 +108,8 @@ def init_args():
     parser.add_argument('-g', dest='target_thresh', default='thresh', choices=['mode', 'median', 'mean', 'thresh'], help="RMS residual per ifg (in 2pi) for accepting the correction, read from info/131resid_2pi.txt")
     parser.add_argument('--suffix', default="", type=str, help="suffix of the input 131resid_2pi*.txt and outputs")
     parser.add_argument('-n', dest='n_para', type=int, help="number of processes for parallel processing")
+    parser.add_argument('--move_weak',  action='store_true', help="move ifgs forming weak links to subfolder of correct_dir")
+
     args = parser.parse_args()
 
 
@@ -504,13 +506,14 @@ def main():
         for i in strong_links:
             print('{}'.format(i), file=f)
 
-    # move weak ifgs to subfolder
-    weak_ifg_dir = os.path.join(correct_dir, "weak_links")
-    Path(weak_ifg_dir).mkdir(parents=True, exist_ok=True)
-    for pair in weak_links:
-        unw_folder = os.path.join(correct_dir, pair)
-        dest_folder = os.path.join(weak_ifg_dir, pair)
-        shutil.move(unw_folder, dest_folder)
+    if args.move_weak:
+        # move weak ifgs to subfolder
+        weak_ifg_dir = os.path.join(correct_dir, "weak_links")
+        Path(weak_ifg_dir).mkdir(parents=True, exist_ok=True)
+        for pair in weak_links:
+            unw_folder = os.path.join(correct_dir, pair)
+            dest_folder = os.path.join(weak_ifg_dir, pair)
+            shutil.move(unw_folder, dest_folder)
 
     finish()
 
