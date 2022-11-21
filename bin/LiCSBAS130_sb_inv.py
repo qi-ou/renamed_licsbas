@@ -372,31 +372,31 @@ def main():
         print('pixel_spacing_r: {:.2f} m'.format(pixsp_r), file=f)
         print('pixel_spacing_a: {:.2f} m'.format(pixsp_a), file=f)
 
-    #
-    # #%% Ref phase for inversion
-    # lengththis = refy2-refy1
-    # countf = width*refy1
-    # countl = width*lengththis # Number to be read
-    # ref_unw = []
-    # for i, ifgd in enumerate(ifgdates):
-    #     unwfile = os.path.join(ifgdir, ifgd, ifgd+'.unw')
-    #     f = open(unwfile, 'rb')
-    #     f.seek(countf*4, os.SEEK_SET) #Seek for >=2nd path, 4 means byte
-    #
-    #     ### Read unw data (mm) at ref area
-    #     unw = np.fromfile(f, dtype=np.float32, count=countl).reshape((lengththis, width))[:, refx1:refx2]*coef_r2m
-    #
-    #     unw[unw == 0] = np.nan
-    #     if np.all(np.isnan(unw)):
-    #         preview_png = os.path.join(tsadir, ifgd+'.png')
-    #         print('See {}.'.format(preview_png))
-    #         data = np.fromfile(unwfile, dtype=np.float32).reshape((length, width))*coef_r2m
-    #         plot_lib.make_im_png(data, preview_png, cmap_vel, ifgd, -wavelength / 2 * 1000, wavelength / 2 * 1000, ref_window=[refx1, refx2, refy1, refy2])
-    #         sys.exit('All nan in ref area in {}.'.format(ifgd))
-    #
-    #     ref_unw.append(np.nanmean(unw))
-    #
-    #     f.close()
+
+    #%% Ref phase for inversion
+    lengththis = refy2-refy1
+    countf = width*refy1
+    countl = width*lengththis # Number to be read
+    ref_unw = []
+    for i, ifgd in enumerate(ifgdates):
+        unwfile = os.path.join(ifgdir, ifgd, ifgd+'.unw')
+        f = open(unwfile, 'rb')
+        f.seek(countf*4, os.SEEK_SET) #Seek for >=2nd path, 4 means byte
+
+        ### Read unw data (mm) at ref area
+        unw = np.fromfile(f, dtype=np.float32, count=countl).reshape((lengththis, width))[:, refx1:refx2]*coef_r2m
+
+        unw[unw == 0] = np.nan
+        if np.all(np.isnan(unw)):
+            preview_png = os.path.join(tsadir, ifgd+'.png')
+            print('See {}.'.format(preview_png))
+            data = np.fromfile(unwfile, dtype=np.float32).reshape((length, width))*coef_r2m
+            plot_lib.make_im_png(data, preview_png, cmap_vel, ifgd, -wavelength / 2 * 1000, wavelength / 2 * 1000, ref_window=[refx1, refx2, refy1, refy2])
+            sys.exit('All nan in ref area in {}.'.format(ifgd))
+
+        ref_unw.append(np.nanmean(unw))
+
+        f.close()
 
 
     #%% Open cum.h5 for output
@@ -452,7 +452,7 @@ def main():
             ### Read unw data (mm) at patch area
             unw = np.fromfile(f, dtype=np.float32, count=countl).reshape((lengththis, width))*coef_r2m
             unw[unw == 0] = np.nan # Fill 0 with nan
-            # unw = unw - ref_unw[i]
+            unw = unw - ref_unw[i]
             unwpatch[i] = unw
             f.close()
 
