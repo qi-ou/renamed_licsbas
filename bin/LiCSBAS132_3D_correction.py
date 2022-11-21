@@ -182,7 +182,7 @@ def set_input_output():
 
 
 def get_para():
-    global width, length, coef_r2m, correction_thresh, target_thresh, ref_x, ref_y, n_para, res_list
+    global width, length, coef_r2m, correction_thresh, target_thresh, ref_x, ref_y, n_para, res_list, ifg_to_correct
 
     # read ifg size and satellite frequency
     mlipar = os.path.join(ccdir, 'slc.mli.par')
@@ -229,6 +229,16 @@ def get_para():
 
         print("Correction threshold = {:.2f}".format(correction_thresh))
         print("Target threshold = {:.2f}".format(target_thresh))
+
+        stats_file = os.path.join(infodir, '131resid_2pi{}.txt'.format(args.suffix))
+        ifg_to_correct = []
+        ### Determine type of bperp_file; old or not
+        with open(stats_file) as f:
+            line = f.readline()
+            if line.startswith("2"):
+                ifg, rms = line.split()
+                if float(rms)>correction_thresh:
+                    ifg_to_correct.append(ifg)
 
 
 def perform_correction(ifg_list=None):
@@ -538,7 +548,7 @@ def correction_main():
     good_ifg = []
     bad_ifg_not_corrected = []
 
-    perform_correction()
+    perform_correction(ifg_to_correct)
     save_lists()
     n_gap, strong_links, weak_links = plot_networks()
 
@@ -669,7 +679,7 @@ def mode_correction():
     # parallel processing
     if n_para > 1 and len(res_list) > 20:
         pool = multi.Pool(processes=n_para)
-        pool.map(correcting_by_mode, even_split(res_list, n_para))
+        pool.map(correcting_by_mode, even_split(ifg_to_correct, n_para))
     else:
         correcting_by_mode(res_list)
 
@@ -729,9 +739,17 @@ def main():
         perc_list = perform_masking()
         plot_network_with_unw_perc(perc_list)
     elif args.correction_by_mode:
-        mode_correction()
+        if len(ifg_to_correct) > 0:
+            print("Correcting {} ifgs...\n".format(len(ifg_to_correct)))
+            mode_correction()
+        else:
+            print("No ifg need correcting, bye!  ")
     else:
-        correction_main()
+        if len(ifg_to_correct) > 0:
+            print("Correcting {} ifgs...\n".format(len(ifg_to_correct)))
+            correction_main()
+        else:
+            print("No ifg need correcting, bye! ")
 
     finish()
 
