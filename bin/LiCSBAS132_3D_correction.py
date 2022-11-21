@@ -204,7 +204,7 @@ def get_para():
     # multi-processing
     if not args.n_para:
         try:
-            n_para = len(os.sched_getaffinity(0))
+            n_para = min(len(os.sched_getaffinity(0)), 8) # maximum use 8 cores
         except:
             n_para = multi.cpu_count()
     else:
