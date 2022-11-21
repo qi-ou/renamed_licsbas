@@ -157,6 +157,8 @@ def one_correction():
     current_iter_unw_abspath = os.path.abspath(os.path.join(args.frame_dir, current_iter_unwdir))  # to read .unw
     next_iter = current_iter + 1
     next_iter_unwdir = ccdir + "{}".format(int(next_iter))
+    masking_iter = next_iter + 1
+    masking_unwdir = ccdir + "{}".format(int(masking_iter))
 
     # set up directories for the first iteration, linking good unw to a separate folder:
     first_iteration(current_iter_unw_abspath)
@@ -165,11 +167,16 @@ def one_correction():
     run_130(current_iter_unwdir, current_iter)
     run_131(current_iter)
     run_132(current_iter_unwdir, next_iter_unwdir, current_iter)
+
     run_130(next_iter_unwdir, next_iter)
     run_131(next_iter)
+    run_masking(next_iter_unwdir, masking_unwdir, next_iter)
+
+    run_130(masking_unwdir, masking_iter)
+    run_131(masking_iter)
 
     # compile all results into cum.h5
-    run_133(current_iter)
+    run_133(masking_iter)
 
 
 def run_130(unw_dir, current_iter):
@@ -186,13 +193,18 @@ def run_131(current_iter):
 
 
 def run_132(before_dir, after_dir, current_iter):
-    os.system('LiCSBAS132_3D_correction.py -c {} -d {} -r {} -t {} --suffix {} --move_weak'.format(
+    os.system('LiCSBAS132_3D_correction.py -c {} -d {} -o {} -t {} --suffix {} --move_weak'.format(
         ccdir, before_dir, after_dir, args.ts_dir, int(current_iter)))
 
 
 def run_133(current_iter):
     os.system('LiCSBAS133_write_h5.py -c {} -t {} --suffix {} '.format(
         ccdir, args.ts_dir, int(current_iter)))
+
+
+def run_masking(before_dir, after_dir, current_iter):
+    os.system('LiCSBAS132_3D_correction.py -c {} -d {} -o {} -t {} --suffix {} --mask_by_residual'.format(
+        ccdir, before_dir, after_dir, args.ts_dir, int(current_iter)))
 
 
 def main():
