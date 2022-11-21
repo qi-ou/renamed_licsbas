@@ -111,7 +111,9 @@ def init_args():
     parser.add_argument('--move_weak',  action='store_true', help="move ifgs forming weak links to subfolder of correct_dir")
     parser.add_argument('--mask_by_residual',  action='store_true', help="perform masking instead of correction")
     parser.add_argument('-m', dest='mask_thresh', type=float, default=0.2, help="RMS residual per ifg (in 2pi) for correction")
-    parser.add_argument('--depeak', default=False, action='store_true', help="calculate RMS residual after offset by mode")
+    parser.add_argument('--no_depeak', default=False, action='store_true', help="don't offset by residual mode before calculation (recommend depeak)")
+    parser.add_argument('--correction_by_mode', default=False, action='store_true', help="perform correction by mode only")
+    parser.add_argument('--correction_by_integer', default=False, action='store_true', help="perform correction by integer only")
     args = parser.parse_args()
 
 
@@ -180,7 +182,7 @@ def set_input_output():
 
 
 def get_para():
-    global width, length, coef_r2m, correction_thresh, target_thresh, ref_x, ref_y
+    global width, length, coef_r2m, correction_thresh, target_thresh, ref_x, ref_y, n_para, res_list
 
     # read ifg size and satellite frequency
     mlipar = os.path.join(ccdir, 'slc.mli.par')
@@ -198,6 +200,20 @@ def get_para():
     refx1, refx2, refy1, refy2 = [int(s) for s in re.split('[:/]', refarea)]
     ref_x = int((refx1 + refx2) / 2)
     ref_y = int((refy1 + refy2) / 2)
+
+    # multi-processing
+    if not args.n_para:
+        try:
+            n_para = len(os.sched_getaffinity(0))
+        except:
+            n_para = multi.cpu_count()
+    else:
+        n_para = args.n_para
+
+    # check .res files exist
+    res_list = glob.glob(os.path.join(resdir, '*.res'))
+    if len(res_list) == 0:
+        sys.exit('No ifgs for correcting...\nCheck if there are *res files in the directory {}'.format(resdir))
 
     if not args.mask_by_residual:
         # read threshold value
@@ -221,24 +237,10 @@ def perform_correction(ifg_list=None):
     bad_ifg_not_corrected = []
 
     # automatic correction
-    if ifg_list is None:
-        res_list = glob.glob(os.path.join(resdir, '*.res'))
-    else:
+    if ifg_list:
         res_list = [os.path.join(resdir, x+'.res') for x in ifg_list]
-    # print(res_list)
 
-    # multi-processing with correction_decision()
-    if not args.n_para:
-        try:
-            n_para = len(os.sched_getaffinity(0))
-        except:
-            n_para = multi.cpu_count()
-    else:
-        n_para = args.n_para
-
-    if len(res_list) == 0:
-        sys.exit('No ifgs for correcting...\nCheck if there are *res files in the directory {}'.format(resdir))
-
+    # parallel processing
     if n_para > 1 and len(res_list) > 100:
         pool = multi.Pool(processes=n_para)
         results = pool.map(correction_decision, even_split(res_list, n_para))
@@ -263,6 +265,19 @@ def even_split(a, n):
     return [a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
 
 
+def load_res(res_file, length, width):
+    res_mm = np.fromfile(res_file, dtype=np.float32).reshape((length, width))
+    res_rad = res_mm / coef_r2m
+    res_num_2pi = res_rad / 2 / np.pi
+    if not args.no_depeak:
+        counts, bins = np.histogram(res_num_2pi, np.arange(-2.5, 2.6, 0.1))
+        peak = bins[counts.argmax()] + 0.05
+        res_num_2pi = res_num_2pi - peak
+    res_rms = np.sqrt(np.nanmean(res_num_2pi ** 2))
+    del res_mm, res_rad
+    return res_num_2pi, res_rms
+
+
 def correction_decision(res_list):
     # # set up
     bad_list = []
@@ -274,16 +289,9 @@ def correction_decision(res_list):
         # read input res
         pair = os.path.basename(i).split('.')[0][-17:]
         print(pair)
-        res_mm = np.fromfile(i, dtype=np.float32).reshape((length, width))
-        res_rad = res_mm / coef_r2m
-        res_num_2pi = res_rad / 2 / np.pi
-        if args.depeak:
-            counts, bins = np.histogram(res_num_2pi, np.arange(-2.5, 2.6, 0.1))
-            peak = bins[counts.argmax()] + 0.05
-            res_num_2pi = res_num_2pi - peak
-        res_rms = np.sqrt(np.nanmean(res_num_2pi ** 2))
+        res_num_2pi, res_rms = load_res(i, length, width)
 
-        if res_rms < correction_thresh:
+        if res_rms < correction_thresh: # good
             good_list.append(pair)
             print("RMS residual = {:.2f}, good...".format(res_rms))
 
@@ -296,40 +304,23 @@ def correction_decision(res_list):
             linkfile = os.path.join(correct_pair_dir, pair + '.unw')
             os.link(unwfile, linkfile)
 
-            ## plot_res
-            plt.imshow(res_num_2pi, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
-            plt.title(pair + " RMS_res={:.2f}".format(res_rms))
-            plt.colorbar()
-            plt.tight_layout()
-            plt.savefig(good_png_dir + '{}.png'.format(pair), dpi=300, bbox_inches='tight')
-            plt.close()
+            # plot good res
+            plot_good_res(pair, res_num_2pi, res_rms)
 
-            del res_num_2pi, res_mm, res_rad, res_rms
+            del res_num_2pi, res_rms
 
         else:
             print("RMS residual = {:2f}, not good...".format(res_rms))
             res_integer = np.round(res_num_2pi)
             rms_res_integer_corrected = np.sqrt(np.nanmean((res_num_2pi - res_integer) ** 2))
-            if rms_res_integer_corrected > target_thresh:
+            if rms_res_integer_corrected > target_thresh: # bad
                 bad_list.append(pair)
                 print("Integer reduces rms residuals to {:.2f}, still above threshold of {:.2f}, discard...".format(
                     rms_res_integer_corrected, target_thresh))
+                # plot bad res
+                plot_bad_res(pair, res_num_2pi, res_integer, res_rms)
 
-                ## plot_res
-                fig, ax = plt.subplots(1, 2, figsize=(9, 6))
-                fig.suptitle(pair)
-                for x in ax:
-                    x.axes.xaxis.set_ticklabels([])
-                    x.axes.yaxis.set_ticklabels([])
-                im_res = ax[0].imshow(res_num_2pi, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
-                im_res = ax[1].imshow(res_integer, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
-                ax[0].scatter(ref_x, ref_y, c='r', s=10)
-                ax[0].set_title("Residual/2pi (RMS={:.2f})".format(res_rms))
-                ax[1].set_title("Nearest integer")
-                plt.colorbar(im_res, ax=ax, location='right', shrink=0.8)
-                plt.savefig(bad_png_dir + '{}.png'.format(pair), dpi=300, bbox_inches='tight')
-                plt.close()
-                del res_num_2pi, res_mm, res_rad, res_rms, res_integer, rms_res_integer_corrected
+                del res_num_2pi, res_rms, res_integer, rms_res_integer_corrected
 
             else:
                 # read in unwrapped ifg and connected components
@@ -337,41 +328,44 @@ def correction_decision(res_list):
                 con_file = os.path.join(ccdir, pair, pair + '.conncomp')
                 unw = np.fromfile(unwfile, dtype=np.float32).reshape((length, width))
                 con = np.fromfile(con_file, dtype=np.int8).reshape((length, width))
-
-                # calculate component modes
-                uniq_components = np.unique(con.flatten())[1:]  # use [1:] to exclude the 0th component
-                res_mode = copy.copy(res_integer)
-                for j in uniq_components:
-                    component_values = res_integer[con == j]
-                    int_values = component_values[~np.isnan(component_values)].astype(int)
-                    mode = stats.mode(int_values)[0][0]
-                    res_mode[con == j] = mode
-
-                # check if component modes does a good job
-                rms_res_mode_corrected = np.sqrt(np.nanmean((res_num_2pi - res_mode) ** 2))
+                res_mode, rms_res_mode_corrected = calc_component_mode(con, res_integer, res_num_2pi)
 
                 # if component mode is useful
-                if rms_res_mode_corrected < target_thresh:
+                if rms_res_mode_corrected < target_thresh: # correct by component
                     print(
                         "Component modes reduces rms residuals to {:.2f}, below target threshold of {:.2f}, correcting by component mode...".format(
                             rms_res_mode_corrected, target_thresh))
                     unw_corrected = unw - res_mode * 2 * np.pi
-                    correction_title = "Mode_corrected"
+
+                    # plotting
                     mode_list.append(pair)
                     png_path = os.path.join(mode_png_dir, '{}.png'.format(pair))
+                    plot_correction_by_mode(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res_mode, res_rms,
+                                            rms_res_integer_corrected, rms_res_mode_corrected, png_path)
 
-                else:  # if component mode is not useful
+                else:  # if component mode is not useful, correct by integer for pixel of high confidence, mask pixel of low confidence
                     print("Component modes reduces rms residuals to {:.2f}, above threshold of {:.2f}...".format(
                         rms_res_mode_corrected, target_thresh))
                     print("Integer reduces rms residuals to {:.2f}, correcting by nearest integer...".format(
                         rms_res_integer_corrected))
+
                     unw_corrected = unw - res_integer * 2 * np.pi
-                    correction_title = "Integer_corrected"
+
+                    # turn uncertain correction into masking
+                    mask1 = np.logical_and(abs(res_num_2pi) > 0.25, abs(res_num_2pi) < 0.75)
+                    mask2 = np.logical_and(abs(res_num_2pi) > 1.25, abs(res_num_2pi) < 1.75)
+                    mask = np.logical_or(mask1, mask2)
+                    res_mask = copy.copy(res_integer)
+                    res_mask[mask] = np.nan
+                    unw_masked = unw - res_integer * 2 * np.pi
+                    rms_res_mask_corrected = np.sqrt(np.nanmean((res_num_2pi - res_mask) ** 2))
+
+                    # plotting
                     int_list.append(pair)
                     png_path = os.path.join(integer_png_dir, '{}.png'.format(pair))
+                    plot_correction_by_integer(pair, unw, unw_corrected, unw_masked, res_mask, res_num_2pi, res_integer, res_rms, rms_res_integer_corrected, rms_res_mask_corrected, png_path)
 
-                plot_correction(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res_mode, correction_title,
-                                res_rms, rms_res_integer_corrected, rms_res_mode_corrected, png_path)
+                    del mask1, mask2, mask, res_mask, unw_masked, rms_res_mask_corrected
 
                 # define output dir
                 correct_pair_dir = os.path.join(correct_dir, pair)
@@ -379,12 +373,38 @@ def correction_decision(res_list):
 
                 # save the corrected unw
                 unw_corrected.flatten().tofile(os.path.join(correct_pair_dir, pair + '.unw'))
-                del con, unw, unw_corrected, res_num_2pi, res_integer, res_mm, res_rad, res_rms, correction_title
+                del con, unw, unw_corrected, res_num_2pi, res_integer, res_rms
 
     return bad_list, mode_list, int_list, good_list
 
 
-def plot_correction(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res_mode, correction_title, res_rms, rms_res_integer_corrected, rms_res_mode_corrected, png_path):
+def plot_good_res(pair, res_num_2pi, res_rms):
+    ## plot_res
+    plt.imshow(res_num_2pi, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+    plt.title(pair + " RMS_res={:.2f}".format(res_rms))
+    plt.colorbar()
+    plt.tight_layout()
+    plt.savefig(good_png_dir + '{}.png'.format(pair), dpi=300, bbox_inches='tight')
+    plt.close()
+
+
+def plot_bad_res(pair, res_num_2pi, res_integer, res_rms):
+    fig, ax = plt.subplots(1, 2, figsize=(9, 6))
+    fig.suptitle(pair)
+    for x in ax:
+        x.axes.xaxis.set_ticklabels([])
+        x.axes.yaxis.set_ticklabels([])
+    im_res = ax[0].imshow(res_num_2pi, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+    im_res = ax[1].imshow(res_integer, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+    ax[0].scatter(ref_x, ref_y, c='r', s=10)
+    ax[0].set_title("Residual/2pi (RMS={:.2f})".format(res_rms))
+    ax[1].set_title("Nearest integer")
+    plt.colorbar(im_res, ax=ax, location='right', shrink=0.8)
+    plt.savefig(bad_png_dir + '{}.png'.format(pair), dpi=300, bbox_inches='tight')
+    plt.close()
+
+
+def plot_correction_by_mode(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res_mode, res_rms, rms_res_integer_corrected, rms_res_mode_corrected, png_path):
     fig, ax = plt.subplots(2, 3, figsize=(9, 5))
     fig.suptitle(pair)
     for x in ax[:, :].flatten():
@@ -401,16 +421,40 @@ def plot_correction(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res
     ax[1, 0].scatter(ref_x, ref_y, c='r', s=10)
     ax[0, 0].set_title("Components")
     ax[0, 1].set_title("Unw (rad)")
-    ax[0, 2].set_title(correction_title)
+    ax[0, 2].set_title("Mode Corrected")
     ax[1, 0].set_title("Residual/2pi (RMS={:.2f})".format(res_rms))
     ax[1, 1].set_title("Nearest integer (to {:.2f})".format(rms_res_integer_corrected))
     ax[1, 2].set_title("Component mode (to {:.2f})".format(rms_res_mode_corrected))
-    # fig.colorbar(im_con, ax=ax[0, 0], location='right', shrink=0.8)
     fig.colorbar(im_unw, ax=ax[0, :], location='right', shrink=0.8)
     fig.colorbar(im_res, ax=ax[1, :], location='right', shrink=0.8)
     plt.savefig(png_path, dpi=300, bbox_inches='tight')
     plt.close()
 
+def plot_correction_by_integer(pair, unw, unw_corrected, unw_masked, res_mask, res_num_2pi, res_integer, res_rms, rms_res_integer_corrected, rms_res_mask_corrected, png_path):
+    fig, ax = plt.subplots(2, 3, figsize=(9, 5))
+    fig.suptitle(pair)
+    for x in ax[:, :].flatten():
+        x.axes.xaxis.set_ticklabels([])
+        x.axes.yaxis.set_ticklabels([])
+    unw_vmin = np.nanpercentile(unw, 0.5)
+    unw_vmax = np.nanpercentile(unw, 99.5)
+    im_unw = ax[0, 0].imshow(unw, vmin=unw_vmin, vmax=unw_vmax, cmap=cm.RdBu, interpolation='nearest')
+    im_unw = ax[0, 1].imshow(unw_corrected, vmin=unw_vmin, vmax=unw_vmax, cmap=cm.RdBu, interpolation='nearest')
+    im_unw = ax[0, 2].imshow(unw_masked, vmin=unw_vmin, vmax=unw_vmax, cmap=cm.RdBu, interpolation='nearest')
+    im_res = ax[1, 0].imshow(res_num_2pi, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+    im_res = ax[1, 1].imshow(res_integer, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+    im_res = ax[1, 2].imshow(res_mask, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+    ax[1, 0].scatter(ref_x, ref_y, c='r', s=10)
+    ax[0, 0].set_title("Unw (rad)")
+    ax[0, 1].set_title("Correct by Integer")
+    ax[0, 2].set_title("Correct with Mask")
+    ax[1, 0].set_title("Residual/2pi (RMS={:.2f})".format(res_rms))
+    ax[1, 1].set_title("Nearest Integer ({:.2f})".format(rms_res_integer_corrected))
+    ax[1, 2].set_title("Masked Integer ({:.2f})".format(rms_res_mask_corrected))
+    fig.colorbar(im_unw, ax=ax[0, :], location='right', shrink=0.8)
+    fig.colorbar(im_res, ax=ax[1, :], location='right', shrink=0.8)
+    plt.savefig(png_path, dpi=300, bbox_inches='tight')
+    plt.close()
 
 def save_lists():
 
@@ -521,20 +565,7 @@ def correction_main():
 
 def perform_masking():
 
-    res_list = glob.glob(os.path.join(resdir, '*.res'))
-
-    # multi-processing with correction_decision()
-    if not args.n_para:
-        try:
-            n_para = len(os.sched_getaffinity(0))
-        except:
-            n_para = multi.cpu_count()
-    else:
-        n_para = args.n_para
-
-    if len(res_list) == 0:
-        sys.exit('No ifgs for correcting...\nCheck if there are *res files in the directory {}'.format(resdir))
-
+    # multi-processing
     if n_para > 1 and len(res_list) > 20:
         pool = multi.Pool(processes=n_para)
         results = pool.map(masking, even_split(res_list, n_para))
@@ -560,9 +591,7 @@ def masking(res_list):
         cc_pixel_count = np.count_nonzero(~np.isnan(coh))
 
         # generate a mask using res, and make a masked_residual map (for plotting only)
-        res_mm = np.fromfile(i, dtype=np.float32).reshape((length, width))
-        res_rad = res_mm / coef_r2m
-        res_num_2pi = res_rad / 2 / np.pi
+        res_num_2pi, res_rms = load_res(i, length, width)
         mask = abs(res_num_2pi) > args.mask_thresh
         res_num_2pi_masked = copy.copy(res_num_2pi)
         res_num_2pi_masked[mask] = np.nan
@@ -583,7 +612,7 @@ def masking(res_list):
         Path(mask_pair_dir).mkdir(parents=True, exist_ok=True)
         unw_masked.flatten().tofile(os.path.join(mask_pair_dir, pair + '.unw'))
 
-        del unw, unw_masked, res_mm, res_rad, res_num_2pi, mask, res_num_2pi_masked
+        del unw, unw_masked, res_num_2pi, mask, res_num_2pi_masked
     return unw_perc_list
 
 
@@ -631,6 +660,61 @@ def plot_network_with_unw_perc(perc_list):
     plot_lib.plot_coloured_network(ifgdates, bperp, perc_list, pngfile)
 
 
+def mode_correction():
+    # parallel processing
+    if n_para > 1 and len(res_list) > 20:
+        pool = multi.Pool(processes=n_para)
+        pool.map(correcting_by_mode, even_split(res_list, n_para))
+    else:
+        correcting_by_mode(res_list)
+
+
+def calc_component_mode(con, res_integer, res_num_2pi):
+    # calculate component modes
+    uniq_components = np.unique(con.flatten())[1:]  # use [1:] to exclude the 0th component
+    res_mode = copy.copy(res_integer)
+    for j in uniq_components:
+        component_values = res_integer[con == j]
+        int_values = component_values[~np.isnan(component_values)].astype(int)
+        mode = stats.mode(int_values)[0][0]
+        res_mode[con == j] = mode
+    rms_res_mode_corrected = np.sqrt(np.nanmean((res_num_2pi - res_mode) ** 2))
+    return res_mode, rms_res_mode_corrected
+
+
+def correcting_by_mode(reslist):
+    for i in reslist:
+        pair = os.path.basename(i).split('.')[0][-17:]
+        print(pair)
+        res_num_2pi, res_rms = load_res(i, length, width)
+        res_integer = np.round(res_num_2pi)
+        rms_res_integer_corrected = np.sqrt(np.nanmean((res_num_2pi - res_integer) ** 2))
+
+        # calc component mode
+        unwfile = os.path.join(unwdir, pair, pair + '.unw')
+        con_file = os.path.join(ccdir, pair, pair + '.conncomp')
+        unw = np.fromfile(unwfile, dtype=np.float32).reshape((length, width))
+        con = np.fromfile(con_file, dtype=np.int8).reshape((length, width))
+        res_mode, rms_res_mode_corrected = calc_component_mode(con, res_integer, res_num_2pi)
+
+        # correcting by component mode
+        unw_corrected = unw - res_mode * 2 * np.pi
+
+        # plotting
+        correction_title = "Mode_corrected"
+        png_path = os.path.join(mode_png_dir, '{}.png'.format(pair))
+        plot_correction(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res_mode, correction_title,
+                        res_rms, rms_res_integer_corrected, rms_res_mode_corrected, png_path)
+
+        # define output dir
+        correct_pair_dir = os.path.join(correct_dir, pair)
+        Path(correct_pair_dir).mkdir(parents=True, exist_ok=True)
+
+        # save the corrected unw
+        unw_corrected.flatten().tofile(os.path.join(correct_pair_dir, pair + '.unw'))
+        del con, unw, unw_corrected, res_num_2pi, res_integer, res_rms, correction_title
+
+
 def main():
     start()
     init_args()
@@ -640,6 +724,8 @@ def main():
     if args.mask_by_residual:
         perc_list = perform_masking()
         plot_network_with_unw_perc(perc_list)
+    elif args.correction_by_mode:
+        mode_correction()
     else:
         correction_main()
 
