@@ -67,7 +67,7 @@ def main(argv=None):
     #%% Read options
     try:
         try:
-            opts, args = getopt.getopt(argv[1:], "hi:b:o:r:", ["help", "not_plot_bad"])
+            opts, args = getopt.getopt(argv[1:], "hi:b:o:r:", ["help", "not_plot_bad", "plot_weak", 'plot_colour'])
         except getopt.error as msg:
             raise Usage(msg)
         for o, a in opts:
@@ -84,6 +84,10 @@ def main(argv=None):
                 bad_ifgfile = a
             elif o == '--not_plot_bad':
                 plot_bad_flag = False
+            elif o == '--plot_weak':
+                plot_weak = True
+            elif o == '--plot_colour':
+                plot_colour = True
 
         if not ifgfile:
             raise Usage('No ifg list given, -i is not optional!')
@@ -112,7 +116,12 @@ def main(argv=None):
         bad_ifgdates = []
 
     #%% Plot image
-    plot_lib.plot_network(ifgdates, bperp, bad_ifgdates, pngfile, plot_bad_flag)
+    if plot_weak:
+        strong_links, weak_links = tools_lib.separate_strong_and_weak_links(ifgdates)
+        plot_lib.plot_network(ifgdates, bperp, weak_links, pngfile, plot_bad=True, label_name='Weak Links')
+    else:
+        plot_lib.plot_network(ifgdates, bperp, bad_ifgdates, pngfile, plot_bad_flag)
+
 
 
     #%% Finish
