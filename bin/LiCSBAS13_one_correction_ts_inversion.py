@@ -160,14 +160,14 @@ def one_correction():
     masking_iter = next_iter + 1
     masking_unwdir = ccdir + "{}".format(int(masking_iter))
 
-    # set up directories for the first iteration, linking good unw to a separate folder:
-    first_iteration(current_iter_unw_abspath)
-
-    # run one ts inversion, followed by one correction and one more ts inversion
-    run_130(current_iter_unwdir, current_iter)
-    run_131(current_iter)
-    run_132(current_iter_unwdir, next_iter_unwdir, current_iter)
-
+    # # set up directories for the first iteration, linking good unw to a separate folder:
+    # first_iteration(current_iter_unw_abspath)
+    #
+    # # run one ts inversion, followed by one correction and one more ts inversion
+    # run_130(current_iter_unwdir, current_iter)
+    # run_131(current_iter)
+    # run_132(current_iter_unwdir, next_iter_unwdir, current_iter)
+    #
     run_130(next_iter_unwdir, next_iter)
     run_131(next_iter)
     run_masking(next_iter_unwdir, masking_unwdir, next_iter)
