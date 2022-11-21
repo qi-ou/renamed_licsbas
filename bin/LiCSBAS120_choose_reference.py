@@ -296,7 +296,7 @@ def save_reference_to_file():
         print('{}:{}/{}:{}'.format(refx1, refx2, refy1, refy2), file=f)
 
 
-def discard_ifg_with_all_nans_at_ref():
+def reference_ifg_and_discard_ifg_with_all_nans_at_ref():
     global noref_ifg, weak_links, retained_ifgs
     print("Discarding any ifg with all nan values in the selected reference window...")
     ### identify IFGs with all nan in the reference window
@@ -342,8 +342,7 @@ def discard_ifg_with_all_nans_at_ref():
             print('{}'.format(i), file=f)
 
 
-def plot_networks():
-    #%% Plot network
+def get_bperp_from_ifgdates(ifgdates):
     ## Read bperp data or dummy
     imdates = tools_lib.ifgdates2imdates(ifgdates)
     bperp_file = os.path.join(ifgdir, 'baselines')
@@ -352,16 +351,23 @@ def plot_networks():
     else: #dummy
         n_im = len(imdates)
         bperp = np.random.random(n_im).tolist()
+    return bperp
+
+
+def plot_networks():
+    #%% Plot network
+    bperp = get_bperp_from_ifgdates(ifgdates)
 
     pngfile = os.path.join(netdir, 'network120_all.png')
     plot_lib.plot_network(ifgdates, bperp, [], pngfile)
 
     pngfile = os.path.join(netdir, 'network120_red_no_ref.png')
-    plot_lib.plot_network(ifgdates, bperp, noref_ifg, pngfile)
+    plot_lib.plot_network(ifgdates, bperp, noref_ifg, pngfile, plot_bad=True, label_name='NaN at Ref')
 
-    pngfile = os.path.join(netdir, 'network120_remain.png')
+    bperp = get_bperp_from_ifgdates(retained_ifgs)
+    pngfile = os.path.join(netdir, 'network120_remain_strong.png')
     n_gap = plot_lib.plot_network(retained_ifgs, bperp, weak_links, pngfile, plot_bad=True, label_name='Weak Links')
-    print("There is {} gap(s) in the network".format(n_gap))
+    print("There are {} gap(s) in the remaining network".format(n_gap))
 
 
 def main():
@@ -379,7 +385,7 @@ def main():
     closest_to_ref_center()
     plot_ref_proxies()
     save_reference_to_file()
-    discard_ifg_with_all_nans_at_ref()
+    reference_ifg_and_discard_ifg_with_all_nans_at_ref()
     plot_networks()
     finish()
 
