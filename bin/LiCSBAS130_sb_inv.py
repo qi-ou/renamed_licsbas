@@ -212,15 +212,15 @@ def main():
     # define output directories and files
     resultsdir = os.path.join(tsadir, '130results'+args.suffix)  # to save vel, vintercept, rms etc
     if os.path.exists(resultsdir): shutil.rmtree(resultsdir)
-    os.mkdir(resultsdir, parents=True, exist_ok=True)
+    os.mkdir(resultsdir)
 
     resdir = os.path.join(tsadir, '130resid'+args.suffix)  # to save .res
     if os.path.exists(resdir): shutil.rmtree(resdir)
-    os.mkdir(resdir, parents=True, exist_ok=True)
+    os.mkdir(resdir)
 
     incdir = os.path.join(tsadir,'130increment'+args.suffix)
     if os.path.exists(incdir): shutil.rmtree(incdir)
-    os.mkdir(incdir, parents=True, exist_ok=True)
+    os.mkdir(incdir)
 
     cumh5file = os.path.join(tsadir, '130cum{}.h5'.format(args.suffix))
     restxtfile = os.path.join(infodir, '130resid{}.txt'.format(args.suffix))
