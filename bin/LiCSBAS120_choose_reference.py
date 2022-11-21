@@ -48,6 +48,7 @@ import LiCSBAS_io_lib as io_lib
 import LiCSBAS_tools_lib as tools_lib
 import LiCSBAS_plot_lib as plot_lib
 from matplotlib import cm
+from pathlib import Path
 
 
 def block_sum(array, k):
@@ -103,7 +104,7 @@ def finish():
 
 
 def set_input_output():
-    global ifgdir, tsadir, infodir, resultsdir, netdir, noref_ifgfile, no_ref_dir, reference_png
+    global ifgdir, tsadir, infodir, resultsdir, netdir, noref_ifgfile, no_ref_dir, reference_png, weak_ifgfile, strong_ifgfile
 
     ### Define input directories
     ifgdir = os.path.abspath(os.path.join(args.frame_dir, args.unw_dir))
@@ -117,6 +118,8 @@ def set_input_output():
     netdir = os.path.join(tsadir, 'network')
     noref_ifgfile = os.path.join(infodir, '120bad_ifg.txt')
     reference_png = os.path.join(infodir, "120_reference.png")
+    weak_ifgfile = os.path.join(infodir, '120weak_links.txt')
+    strong_ifgfile = os.path.join(infodir, '120strong_links.txt')
 
 
 def read_length_width():
@@ -294,7 +297,7 @@ def save_reference_to_file():
 
 
 def discard_ifg_with_all_nans_at_ref():
-    global noref_ifg
+    global noref_ifg, weak_links, retained_ifgs
     print("Discarding any ifg with all nan values in the selected reference window...")
     ### identify IFGs with all nan in the reference window
     ### Check ref exist in unw. If not, list as noref_ifg
@@ -316,9 +319,26 @@ def discard_ifg_with_all_nans_at_ref():
             plt.title(ifgd)
             plt.savefig(pngfile, dpi=300, bbox_inches='tight')
 
+        else:  # save referenced unw to original folder
+            unw_referenced = unw_data - np.nanmean(unw_ref)
+            unw_referenced.flatten().tofile(unwfile)
+
     # save list of no_ref_ifg to a text file in info directory
     with open(noref_ifgfile, 'w') as f:
         for i in noref_ifg:
+            print('{}'.format(i), file=f)
+
+    retained_ifgs = list(set(ifgdates)-set(noref_ifg))
+    strong_links, weak_links = tools_lib.separate_strong_and_weak_links(retained_ifgs)
+
+    # export weak links
+    with open(weak_ifgfile, 'w') as f:
+        for i in weak_links:
+            print('{}'.format(i), file=f)
+
+    # export strong links
+    with open(strong_ifgfile, 'w') as f:
+        for i in strong_links:
             print('{}'.format(i), file=f)
 
 
@@ -326,21 +346,22 @@ def plot_networks():
     #%% Plot network
     ## Read bperp data or dummy
     imdates = tools_lib.ifgdates2imdates(ifgdates)
-    n_im = len(imdates)
     bperp_file = os.path.join(ifgdir, 'baselines')
     if os.path.exists(bperp_file):
         bperp = io_lib.read_bperp_file(bperp_file, imdates)
     else: #dummy
+        n_im = len(imdates)
         bperp = np.random.random(n_im).tolist()
 
     pngfile = os.path.join(netdir, 'network120_all.png')
     plot_lib.plot_network(ifgdates, bperp, [], pngfile)
 
-    pngfile = os.path.join(netdir, 'network120.png')
+    pngfile = os.path.join(netdir, 'network120_red_no_ref.png')
     plot_lib.plot_network(ifgdates, bperp, noref_ifg, pngfile)
 
     pngfile = os.path.join(netdir, 'network120_remain.png')
-    plot_lib.plot_network(ifgdates, bperp, noref_ifg, pngfile, plot_bad=False)
+    n_gap = plot_lib.plot_network(retained_ifgs, bperp, weak_links, pngfile, plot_bad=True, label_name='Weak Links')
+    print("There is {} gap(s) in the network".format(n_gap))
 
 
 def main():
