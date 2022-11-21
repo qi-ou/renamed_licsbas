@@ -166,7 +166,7 @@ def one_correction():
     # # run one ts inversion, followed by one correction and one more ts inversion
     # run_130(current_iter_unwdir, current_iter)
     # run_131(current_iter)
-    # run_132(current_iter_unwdir, next_iter_unwdir, current_iter)
+    run_132(current_iter_unwdir, next_iter_unwdir, current_iter)
     #
     run_130(next_iter_unwdir, next_iter)
     run_131(next_iter)
