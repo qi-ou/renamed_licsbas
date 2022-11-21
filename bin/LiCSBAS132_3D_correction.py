@@ -357,7 +357,7 @@ def correction_decision(res_list):
                     mask = np.logical_or(mask1, mask2)
                     res_mask = copy.copy(res_integer)
                     res_mask[mask] = np.nan
-                    unw_masked = unw - res_integer * 2 * np.pi
+                    unw_masked = unw - res_mask * 2 * np.pi
                     rms_res_mask_corrected = np.sqrt(np.nanmean((res_num_2pi - res_mask) ** 2))
 
                     # plotting
@@ -429,6 +429,7 @@ def plot_correction_by_mode(pair, unw, con, unw_corrected, res_num_2pi, res_inte
     fig.colorbar(im_res, ax=ax[1, :], location='right', shrink=0.8)
     plt.savefig(png_path, dpi=300, bbox_inches='tight')
     plt.close()
+
 
 def plot_correction_by_integer(pair, unw, unw_corrected, unw_masked, res_mask, res_num_2pi, res_integer, res_rms, rms_res_integer_corrected, rms_res_mask_corrected, png_path):
     fig, ax = plt.subplots(2, 3, figsize=(9, 5))
