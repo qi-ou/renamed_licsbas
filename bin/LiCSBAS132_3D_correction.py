@@ -102,7 +102,7 @@ def init_args():
     parser.add_argument('-f', dest='frame_dir', default="./", help="directory of LiCSBAS output of a particular frame")
     parser.add_argument('-c', dest='comp_cc_dir', default="GEOCml10GACOS", help="folder containing connected components and cc files")
     parser.add_argument('-d', dest='unw_dir', default="GEOCml10GACOS", help="folder containing unw input to be corrected")
-    parser.add_argument('-r', dest='out_dir', default="GEOCml10GACOS_corrected", help="folder for corrected/masked unw")
+    parser.add_argument('-o', dest='out_dir', default="GEOCml10GACOS_corrected", help="folder for corrected/masked unw")
     parser.add_argument('-t', dest='ts_dir', default="TS_GEOCml10GACOS", help="folder containing time series and residuals")
     parser.add_argument('-s', dest='correction_thresh', type=float, help="RMS residual per ifg (in 2pi) for correction, override info/131resid_2pi.txt")
     parser.add_argument('-g', dest='target_thresh', default='thresh', choices=['mode', 'median', 'mean', 'thresh'], help="RMS residual per ifg (in 2pi) for accepting the correction, read from info/131resid_2pi.txt, or follow correction_thresh if given")
@@ -111,6 +111,7 @@ def init_args():
     parser.add_argument('--move_weak',  action='store_true', help="move ifgs forming weak links to subfolder of correct_dir")
     parser.add_argument('--mask_by_residual',  action='store_true', help="perform masking instead of correction")
     parser.add_argument('-m', dest='mask_thresh', type=float, default=0.2, help="RMS residual per ifg (in 2pi) for correction")
+    parser.add_argument('--depeak', default=False, action='store_true', help="calculate RMS residual after offset by mode")
     args = parser.parse_args()
 
 
@@ -276,9 +277,10 @@ def correction_decision(res_list):
         res_mm = np.fromfile(i, dtype=np.float32).reshape((length, width))
         res_rad = res_mm / coef_r2m
         res_num_2pi = res_rad / 2 / np.pi
-        counts, bins = np.histogram(res_num_2pi.flatten(), np.arange(-2.5, 2.6, 0.1))
-        peak = bins[counts.argmax()] + 0.05
-        res_num_2pi = res_num_2pi - peak
+        if args.depeak:
+            counts, bins = np.histogram(res_num_2pi, np.arange(-2.5, 2.6, 0.1))
+            peak = bins[counts.argmax()] + 0.05
+            res_num_2pi = res_num_2pi - peak
         res_rms = np.sqrt(np.nanmean(res_num_2pi ** 2))
 
         if res_rms < correction_thresh:
@@ -600,6 +602,8 @@ def plot_masking(pair, unw, unw_masked, res_num_2pi, res_num_2pi_masked, png):
     im_unw = ax[0, 1].imshow(unw_masked, vmin=unw_vmin, vmax=unw_vmax, cmap=cm.RdBu, interpolation='nearest')
     im_res = ax[1, 0].imshow(res_num_2pi, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
     im_res = ax[1, 1].imshow(res_num_2pi_masked, vmin=-2, vmax=2, cmap=cm.RdBu, interpolation='nearest')
+    ax[1, 0].scatter(ref_x, ref_y, c='r', s=10)
+    ax[1, 1].scatter(ref_x, ref_y, c='r', s=10)
 
     ax[0, 0].set_title("Unw (rad)")
     ax[0, 1].set_title("Unw_masked")
