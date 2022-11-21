@@ -245,7 +245,7 @@ def closest_to_ref_center():
     index_nearest_to_center = np.where(distance_to_center == nearest_to_center)
     refy = refys[index_nearest_to_center][0]
     refx = refxs[index_nearest_to_center][0]
-    print("Reference nearest to center: refy={}, refx={}".format(refy, refx))
+    print("Reference window nearest to center: refy={}, refx={}".format(refy, refx))
 
 
 def plot_ref_proxies():
@@ -288,7 +288,7 @@ def save_reference_to_file():
 
     # calc reference window in full resolution ifg
     refx1, refx2, refy1, refy2 = refx*window_size, (refx+1)*window_size, refy*window_size, (refy+1)*window_size
-    print('Selected ref: {}:{}/{}:{}'.format(refx1, refx2, refy1, refy2), flush=True)
+    print('Selected ref in full resolution: {}:{}/{}:{}'.format(refx1, refx2, refy1, refy2), flush=True)
 
     ### Save ref
     refsfile = os.path.join(infodir, '120ref.txt')
@@ -297,8 +297,8 @@ def save_reference_to_file():
 
 
 def reference_ifg_and_discard_ifg_with_all_nans_at_ref():
-    global noref_ifg, weak_links, retained_ifgs
-    print("Discarding any ifg with all nan values in the selected reference window...")
+    global noref_ifg, strong_links, weak_links, retained_ifgs
+    print("Check if any ifg have all nan values in the selected reference window and export referenced ifgs")
     ### identify IFGs with all nan in the reference window
     ### Check ref exist in unw. If not, list as noref_ifg
     noref_ifg = []
@@ -324,17 +324,24 @@ def reference_ifg_and_discard_ifg_with_all_nans_at_ref():
             unw_referenced.flatten().tofile(unwfile)
 
     # save list of no_ref_ifg to a text file in info directory
+
+    print("{} ifgs are discarded due to all nan values in the reference window...".format(len(noref_ifg)))
     with open(noref_ifgfile, 'w') as f:
         for i in noref_ifg:
             print('{}'.format(i), file=f)
+            print('{}'.format(i))
 
+
+    print("Separate strong and weak links in the remaining network")
     retained_ifgs = list(set(ifgdates)-set(noref_ifg))
     strong_links, weak_links = tools_lib.separate_strong_and_weak_links(retained_ifgs)
 
+    print("{} ifgs are discarded due to weak links...".format(len(weak_links)))
     # export weak links
     with open(weak_ifgfile, 'w') as f:
         for i in weak_links:
             print('{}'.format(i), file=f)
+            print('{}'.format(i))
 
     # export strong links
     with open(strong_ifgfile, 'w') as f:
@@ -367,7 +374,7 @@ def plot_networks():
     bperp = get_bperp_from_ifgdates(retained_ifgs)
     pngfile = os.path.join(netdir, 'network120_remain_strong.png')
     n_gap = plot_lib.plot_network(retained_ifgs, bperp, weak_links, pngfile, plot_bad=True, label_name='Weak Links')
-    print("There are {} gap(s) in the remaining network".format(n_gap))
+    print("There are {} gap(s) in the remaining network of {} strong-link ifgs".format(n_gap, len(strong_links)))
 
 
 def main():
