@@ -295,6 +295,7 @@ def save_reference_to_file():
 
 def discard_ifg_with_all_nans_at_ref():
     global noref_ifg
+    print("Discarding any ifg with all nan values in the selected reference window...")
     ### identify IFGs with all nan in the reference window
     ### Check ref exist in unw. If not, list as noref_ifg
     noref_ifg = []
