@@ -48,7 +48,7 @@ import LiCSBAS_io_lib as io_lib
 import LiCSBAS_tools_lib as tools_lib
 import LiCSBAS_plot_lib as plot_lib
 from matplotlib import cm
-from pathlib import Path
+import SCM
 
 
 def block_sum(array, k):
@@ -314,10 +314,9 @@ def reference_ifg_and_discard_ifg_with_all_nans_at_ref():
 
             # plot no_ref_ifg with reference window to no_ref folder
             pngfile = os.path.join(no_ref_dir, ifgd + '.png')
-            plt.imshow(unw_data, vmin=np.nanpercentile(unw_data, 1), vmax=np.nanpercentile(unw_data, 99), cmap=cm.RdBu)
-            plt.plot([refx1, refx2, refx2, refx1, refx1], [refy1, refy1, refy2, refy2, refy1], 'r')
-            plt.title(ifgd)
-            plt.savefig(pngfile, dpi=300, bbox_inches='tight')
+            plot_lib.make_im_png(unw_data, pngfile, SCM.roma.reversed(), ifgd,
+                                 vmin=np.nanpercentile(unw_data, 1), vmax=np.nanpercentile(unw_data, 99),
+                                 ref_window=[refx1, refx2, refy1, refy2])
 
         else:  # save referenced unw to original folder
             unw_referenced = unw_data - np.nanmean(unw_ref)
