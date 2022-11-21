@@ -232,7 +232,7 @@ def get_para():
 
 
 def perform_correction(ifg_list=None):
-    global bad_ifg_not_corrected, ifg_corrected_by_mode, ifg_corrected_by_integer, good_ifg
+    global bad_ifg_not_corrected, ifg_corrected_by_mode, ifg_corrected_by_integer, good_ifg, res_list
     # keep bad_ifg_not_corrected empty at the start of each correction iteration
     bad_ifg_not_corrected = []
 
