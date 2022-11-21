@@ -72,7 +72,7 @@ def init_args():
     parser.add_argument('-g', dest='unw_dir', default="GEOCml10GACOS", help="folder containing unw input")
     parser.add_argument('-t', dest='ts_dir', default="TS_GEOCml10GACOS", help="folder containing time series")
     parser.add_argument('-w', dest='win', default="5", type=float, help="Window size in km")
-    parser.add_argument('-r', dest='thresh', default=0.9, choices=range(0, 1), metavar="[0-1]", type=float, help="proxy threshold above which the window nearest to desired center will be chosen as the reference window")
+    parser.add_argument('-p', dest='percentile', default=90, type=float, choices=range(0, 100), metavar="[0-100]", help="proxy percentile above which the window nearest to desired center will be chosen as the reference window")
     parser.add_argument("--w_unw", default=1, choices=range(0, 1), metavar="[0-1]", type=float, help="weight for block_sum_unw_pixel")
     parser.add_argument('--w_coh', default=1, choices=range(0, 1), metavar="[0-1]", type=float, help="weight for block_sum_coherence")
     parser.add_argument('--w_con', default=1, choices=range(0, 1), metavar="[0-1]", type=float, help="weight for block_sum_component_size")
@@ -236,7 +236,7 @@ def closest_to_ref_center():
     ## choose distance closer to center
     desired_ref_center_y = int(block_proxy.shape[0] * args.refy)
     desired_ref_center_x = int(block_proxy.shape[1] * args.refx)
-    refys, refxs = np.where(block_proxy > args.thresh)
+    refys, refxs = np.where(block_proxy > np.nanpercentile(block_proxy, args.percentile))
     distance_to_center = np.sqrt((refys - desired_ref_center_y) ** 2 + (refxs - desired_ref_center_x) ** 2)
     nearest_to_center = np.min(distance_to_center)
     index_nearest_to_center = np.where(distance_to_center == nearest_to_center)
