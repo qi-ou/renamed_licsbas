@@ -62,6 +62,7 @@ def main(argv=None):
     pngfile = 'network.png'
     bad_ifgfile = []
     plot_bad_flag = True
+    plot_weak = False
 
 
     #%% Read options
@@ -86,8 +87,7 @@ def main(argv=None):
                 plot_bad_flag = False
             elif o == '--plot_weak':
                 plot_weak = True
-            elif o == '--plot_colour':
-                plot_colour = True
+
 
         if not ifgfile:
             raise Usage('No ifg list given, -i is not optional!')
