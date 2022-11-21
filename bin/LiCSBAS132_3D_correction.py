@@ -352,8 +352,8 @@ def correction_decision(res_list):
                     unw_corrected = unw - res_integer * 2 * np.pi
 
                     # turn uncertain correction into masking
-                    mask1 = np.logical_and(abs(res_num_2pi) > 0.25, abs(res_num_2pi) < 0.75)
-                    mask2 = np.logical_and(abs(res_num_2pi) > 1.25, abs(res_num_2pi) < 1.75)
+                    mask1 = np.logical_and(abs(res_num_2pi) > 0.2, abs(res_num_2pi) < 0.8)
+                    mask2 = np.logical_and(abs(res_num_2pi) > 1.2, abs(res_num_2pi) < 1.8)
                     mask = np.logical_or(mask1, mask2)
                     res_mask = copy.copy(res_integer)
                     res_mask[mask] = np.nan
