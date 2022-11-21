@@ -551,6 +551,9 @@ def correction_main():
         print("Target_thres = {}".format(target_thresh))
         print("Consider correcting {} bad ifgs".format(len(bad_ifg_not_corrected)))
 
+        if len(bad_ifg_not_corrected) == 0:
+            sys.exit("No more bad ifgs for correcting...")
+
         perform_correction(bad_ifg_not_corrected)
         save_lists()
         n_gap, strong_links, weak_links = plot_networks()
