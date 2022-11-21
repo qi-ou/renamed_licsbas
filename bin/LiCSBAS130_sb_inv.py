@@ -127,6 +127,7 @@ import LiCSBAS_tools_lib as tools_lib
 import LiCSBAS_loop_lib as loop_lib
 import LiCSBAS_plot_lib as plot_lib
 import argparse
+import shutil
 
 
 class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
@@ -210,11 +211,16 @@ def main():
 
     # define output directories and files
     resultsdir = os.path.join(tsadir, '130results'+args.suffix)  # to save vel, vintercept, rms etc
-    if not os.path.exists(resultsdir): os.mkdir(resultsdir)
+    if os.path.exists(resultsdir): shutil.rmtree(resultsdir)
+    os.mkdir(resultsdir, parents=True, exist_ok=True)
+
     resdir = os.path.join(tsadir, '130resid'+args.suffix)  # to save .res
-    if not os.path.exists(resdir): os.mkdir(resdir)
+    if os.path.exists(resdir): shutil.rmtree(resdir)
+    os.mkdir(resdir, parents=True, exist_ok=True)
+
     incdir = os.path.join(tsadir,'130increment'+args.suffix)
-    if not os.path.exists(incdir): os.mkdir(incdir)
+    if os.path.exists(incdir): shutil.rmtree(incdir)
+    os.mkdir(incdir, parents=True, exist_ok=True)
 
     cumh5file = os.path.join(tsadir, '130cum{}.h5'.format(args.suffix))
     restxtfile = os.path.join(infodir, '130resid{}.txt'.format(args.suffix))
