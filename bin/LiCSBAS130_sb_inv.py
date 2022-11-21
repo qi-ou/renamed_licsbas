@@ -227,8 +227,8 @@ def main():
     imfile = os.path.join(infodir, '130used_image{}.txt'.format(args.suffix))
     rms_cum_wrt_med_file = os.path.join(infodir, '130rms_cum_wrt_med{}'.format(args.suffix))
     rms_cum_png = os.path.join(infodir, '130rms_cum_wrt_med{}.png'.format(args.suffix))
-    refsfile = os.path.join(infodir, '130ref{}.txt'.format(args.suffix))
-    refkml = os.path.join(infodir, '130ref{}.kml'.format(args.suffix))
+    # refsfile = os.path.join(infodir, '130ref{}.txt'.format(args.suffix))
+    # refkml = os.path.join(infodir, '130ref{}.kml'.format(args.suffix))
 
     if n_para > 32:
         # Emprically >32 does not make much faster despite using large resource
@@ -676,48 +676,51 @@ def main():
         print("  Elapsed time for {0}th patch: {1:02}h {2:02}m {3:02}s".format(i_patch+1, hour2, minite2, sec2), flush=True)
 
 
-    #%% Find stable ref point
-    print('\nFind stable reference point...', flush=True)
-    ### Compute RMS of time series with reference to all points
-    sumsq_cum_wrt_med = np.zeros((length, width), dtype=np.float32)
-    for i in range(n_im):
-        sumsq_cum_wrt_med = sumsq_cum_wrt_med + (cum[i, :, :]-np.nanmedian(cum[i, :, :]))**2
-    rms_cum_wrt_med = np.sqrt(sumsq_cum_wrt_med/n_im)
+    # #%% Find stable ref point
+    # print('\nFind stable reference point...', flush=True)
+    # ### Compute RMS of time series with reference to all points
+    # sumsq_cum_wrt_med = np.zeros((length, width), dtype=np.float32)
+    # for i in range(n_im):
+    #     sumsq_cum_wrt_med = sumsq_cum_wrt_med + (cum[i, :, :]-np.nanmedian(cum[i, :, :]))**2
+    # rms_cum_wrt_med = np.sqrt(sumsq_cum_wrt_med/n_im)
+    #
+    # ### Mask by minimum n_gap
+    # n_gap = io_lib.read_img(os.path.join(resultsdir, 'n_gap'), length, width)
+    # min_n_gap = np.nanmin(n_gap)
+    # mask_n_gap = np.float32(n_gap==min_n_gap)
+    # mask_n_gap[mask_n_gap==0] = np.nan
+    # rms_cum_wrt_med = rms_cum_wrt_med*mask_n_gap
+    #
+    # ### Save image
+    # with open(rms_cum_wrt_med_file, 'w') as f:
+    #     rms_cum_wrt_med.tofile(f)
+    # plot_lib.make_im_png(rms_cum_wrt_med, rms_cum_png, cmap_noise_r, 'RMS of cum wrt median (mm)', np.nanpercentile(rms_cum_wrt_med, 1), np.nanpercentile(rms_cum_wrt_med, 99))
+    #
+    # ### Find stable reference
+    # min_rms = np.nanmin(rms_cum_wrt_med)
+    # refy1s, refx1s = np.where(rms_cum_wrt_med==min_rms)
+    # refy1s, refx1s = refy1s[0], refx1s[0] ## Only first index
+    # refy2s, refx2s = refy1s+1, refx1s+1
+    # print('Selected ref: {}:{}/{}:{}'.format(refx1s, refx2s, refy1s, refy2s), flush=True)
+    # if width == width_geo and length == length_geo: ## Geocoded
+    #     ### Make ref_stable.kml
+    #     reflat = lat1+dlat*refy1s
+    #     reflon = lon1+dlon*refx1s
+    #     io_lib.make_point_kml(reflat, reflon, refkml)
 
-    ### Mask by minimum n_gap
-    n_gap = io_lib.read_img(os.path.join(resultsdir, 'n_gap'), length, width)
-    min_n_gap = np.nanmin(n_gap)
-    mask_n_gap = np.float32(n_gap==min_n_gap)
-    mask_n_gap[mask_n_gap==0] = np.nan
-    rms_cum_wrt_med = rms_cum_wrt_med*mask_n_gap
+    # ### Save ref
+    # cumh5.create_dataset('refarea', data='{}:{}/{}:{}'.format(refx1s, refx2s, refy1s, refy2s))
+    # with open(refsfile, 'w') as f:
+    #     print('{}:{}/{}:{}'.format(refx1s, refx2s, refy1s, refy2s), file=f)
 
-    ### Save image
-    with open(rms_cum_wrt_med_file, 'w') as f:
-        rms_cum_wrt_med.tofile(f)
-    plot_lib.make_im_png(rms_cum_wrt_med, rms_cum_png, cmap_noise_r, 'RMS of cum wrt median (mm)', np.nanpercentile(rms_cum_wrt_med, 1), np.nanpercentile(rms_cum_wrt_med, 99))
-
-    ### Find stable reference
-    min_rms = np.nanmin(rms_cum_wrt_med)
-    refy1s, refx1s = np.where(rms_cum_wrt_med==min_rms)
-    refy1s, refx1s = refy1s[0], refx1s[0] ## Only first index
-    refy2s, refx2s = refy1s+1, refx1s+1
-    print('Selected ref: {}:{}/{}:{}'.format(refx1s, refx2s, refy1s, refy2s), flush=True)
-    if width == width_geo and length == length_geo: ## Geocoded
-        ### Make ref_stable.kml
-        reflat = lat1+dlat*refy1s
-        reflon = lon1+dlon*refx1s
-        io_lib.make_point_kml(reflat, reflon, refkml)
+    # ### Referencing cumulative displacement and vel to new stable ref
+    # for i in range(n_im):
+    #     cum[i, :, :] = cum[i, :, :] - cum[i, refy1s, refx1s]
+    # vel = vel - vel[refy1s, refx1s]
+    # vconst = vconst - vconst[refy1s, refx1s]
 
     ### Save ref
-    cumh5.create_dataset('refarea', data='{}:{}/{}:{}'.format(refx1s, refx2s, refy1s, refy2s))
-    with open(refsfile, 'w') as f:
-        print('{}:{}/{}:{}'.format(refx1s, refx2s, refy1s, refy2s), file=f)
-
-    ### Referencing cumulative displacement and vel to new stable ref
-    for i in range(n_im):
-        cum[i, :, :] = cum[i, :, :] - cum[i, refy1s, refx1s]
-    vel = vel - vel[refy1s, refx1s]
-    vconst = vconst - vconst[refy1s, refx1s]
+    cumh5.create_dataset('refarea', data='{}:{}/{}:{}'.format(refx1, refx2, refy1, refy2))
 
     #%% Close h5 file
     if not save_mem:
