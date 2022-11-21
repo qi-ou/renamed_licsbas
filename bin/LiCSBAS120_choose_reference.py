@@ -297,7 +297,7 @@ def save_reference_to_file():
         print('{}:{}/{}:{}'.format(refx1, refx2, refy1, refy2), file=f)
 
 
-def reference_ifg_and_discard_ifg_with_all_nans_at_ref():
+def discard_ifg_with_all_nans_at_ref():
     global noref_ifg, strong_links, weak_links, retained_ifgs
     print("Check if any ifg have all nan values in the selected reference window and export referenced ifgs")
     ### identify IFGs with all nan in the reference window
@@ -319,9 +319,9 @@ def reference_ifg_and_discard_ifg_with_all_nans_at_ref():
                                  vmin=np.nanpercentile(unw_data, 1), vmax=np.nanpercentile(unw_data, 99),
                                  ref_window=[refx1, refx2, refy1, refy2])
 
-        else:  # save referenced unw to original folder
-            unw_referenced = unw_data - np.nanmean(unw_ref)
-            unw_referenced.flatten().tofile(unwfile)
+        # else:  # save referenced unw to original folder
+        #     unw_referenced = unw_data - np.nanmean(unw_ref)
+        #     unw_referenced.flatten().tofile(unwfile)
 
     # save list of no_ref_ifg to a text file in info directory
 
@@ -392,7 +392,7 @@ def main():
     closest_to_ref_center()
     plot_ref_proxies()
     save_reference_to_file()
-    reference_ifg_and_discard_ifg_with_all_nans_at_ref()
+    discard_ifg_with_all_nans_at_ref()
     plot_networks()
     finish()
 
