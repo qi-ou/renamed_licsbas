@@ -118,20 +118,24 @@ def set_input_output():
 
 def get_ifgdates():
     global ifgdates
-    bad_ifg11file = os.path.join(infodir, '11bad_ifg.txt')
-    bad_ifg12file = os.path.join(infodir, '120bad_ifg.txt')
+    # bad_ifg11file = os.path.join(infodir, '11bad_ifg.txt')
+    # bad_ifg12file = os.path.join(infodir, '120bad_ifg.txt')
+    #
+    # #%% Read date and network information
+    # ### Get all ifgdates in ifgdir
+    # ifgdates_all = tools_lib.get_ifgdates(ifgdir)
+    #
+    # ### Remove bad_ifg11 and 120bad_ifg
+    # bad_ifg11 = io_lib.read_ifg_list(bad_ifg11file)
+    # bad_ifg12 = io_lib.read_ifg_list(bad_ifg12file)
+    # bad_ifg_all = list(set(bad_ifg11+bad_ifg12))
+    # bad_ifg_all.sort()
+    #
+    # ifgdates = list(set(ifgdates_all)-set(bad_ifg_all))
+    # ifgdates.sort()
 
-    #%% Read date and network information
-    ### Get all ifgdates in ifgdir
-    ifgdates_all = tools_lib.get_ifgdates(ifgdir)
-
-    ### Remove bad_ifg11 and 120bad_ifg
-    bad_ifg11 = io_lib.read_ifg_list(bad_ifg11file)
-    bad_ifg12 = io_lib.read_ifg_list(bad_ifg12file)
-    bad_ifg_all = list(set(bad_ifg11+bad_ifg12))
-    bad_ifg_all.sort()
-
-    ifgdates = list(set(ifgdates_all)-set(bad_ifg_all))
+    strong_ifgfile = os.path.join(infodir, '120strong_links.txt')
+    ifgdates = io_lib.read_ifg_list(strong_ifgfile)
     ifgdates.sort()
 
 
