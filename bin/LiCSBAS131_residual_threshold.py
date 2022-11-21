@@ -63,7 +63,7 @@ def init_args():
     parser.add_argument('-r', dest='thresh', type=float, help="user specified threshold value, otherwise auto-detected")
     parser.add_argument('-p', dest='percentile', type=float, help="optional percentile RMS for thresholding")
     parser.add_argument('--suffix', default="", type=str, help="suffix of both input and output")
-    parser.add_argument('--depeak', default=False, action='store_true', help="calculate RMS residual after offset by mode")
+    parser.add_argument('--no_depeak', default=False, action='store_true', help="don't offset by mode (recommend depeak)")
     args = parser.parse_args()
 
 
@@ -128,7 +128,7 @@ def plot_histogram_of_rms_of_depeaked_residuals():
             res_mm = np.fromfile(i, dtype=np.float32)
             res_rad = res_mm / coef_r2m
             res_num_2pi = res_rad / 2 / np.pi
-            if args.depeak:
+            if not args.no_depeak:
                 counts, bins = np.histogram(res_num_2pi, np.arange(-2.5, 2.6, 0.1))
                 peak = bins[counts.argmax()] + 0.05
                 res_num_2pi = res_num_2pi - peak
