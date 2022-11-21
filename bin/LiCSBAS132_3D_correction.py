@@ -457,6 +457,7 @@ def plot_correction_by_integer(pair, unw, unw_corrected, unw_masked, res_mask, r
     plt.savefig(png_path, dpi=300, bbox_inches='tight')
     plt.close()
 
+
 def save_lists():
 
     #%% save ifg lists to text files.
@@ -702,9 +703,8 @@ def correcting_by_mode(reslist):
         unw_corrected = unw - res_mode * 2 * np.pi
 
         # plotting
-        correction_title = "Mode_corrected"
         png_path = os.path.join(mode_png_dir, '{}.png'.format(pair))
-        plot_correction(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res_mode, correction_title,
+        plot_correction_by_mode(pair, unw, con, unw_corrected, res_num_2pi, res_integer, res_mode,
                         res_rms, rms_res_integer_corrected, rms_res_mode_corrected, png_path)
 
         # define output dir
@@ -713,7 +713,7 @@ def correcting_by_mode(reslist):
 
         # save the corrected unw
         unw_corrected.flatten().tofile(os.path.join(correct_pair_dir, pair + '.unw'))
-        del con, unw, unw_corrected, res_num_2pi, res_integer, res_rms, correction_title
+        del con, unw, unw_corrected, res_num_2pi, res_integer, res_rms
 
 
 def main():
