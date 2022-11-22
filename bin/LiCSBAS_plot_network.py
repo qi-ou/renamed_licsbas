@@ -93,10 +93,10 @@ def main(argv=None):
             raise Usage('No ifg list given, -i is not optional!')
         elif not os.path.exists(ifgfile):
             raise Usage('No {} exists!'.format(ifgfile))
-        elif not bperpfile:
-            raise Usage('No bperp list given, -b is not optional!')
-        elif not os.path.exists(bperpfile):
-            raise Usage('No {} exists!'.format(bperpfile))
+        # elif not bperpfile:
+        #     raise Usage('No bperp list given, -b is not optional!')
+        # elif not os.path.exists(bperpfile):
+        #     raise Usage('No {} exists!'.format(bperpfile))
 
     except Usage as err:
         print("\nERROR:", file=sys.stderr, end='')
@@ -108,7 +108,11 @@ def main(argv=None):
     #%% Read info
     ifgdates = io_lib.read_ifg_list(ifgfile)
     imdates = tools_lib.ifgdates2imdates(ifgdates)
-    bperp = io_lib.read_bperp_file(bperpfile, imdates)
+    try:
+        bperp = io_lib.read_bperp_file(bperpfile, imdates)
+    except:
+        n_im = len(imdates)
+        bperp = np.random.random(n_im).tolist()
 
     if bad_ifgfile:
         bad_ifgdates = io_lib.read_ifg_list(bad_ifgfile)
