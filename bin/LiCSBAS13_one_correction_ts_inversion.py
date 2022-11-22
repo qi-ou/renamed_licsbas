@@ -66,6 +66,7 @@ import argparse
 import sys
 import LiCSBAS_io_lib as io_lib
 import LiCSBAS_tools_lib as tools_lib
+import LiCSBAS_plot_lib as plot_lib
 
 
 class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
@@ -108,13 +109,13 @@ def finish():
 
 
 def set_input_output():
-    global ifgdir, tsadir, infodir, ccdir
+    global ifgdir, tsadir, infodir, ccdir, netdir
     # define input directories
     ccdir = args.unw_dir
     ifgdir = os.path.abspath(os.path.join(args.frame_dir, ccdir))  # to read .unw
     tsadir = os.path.abspath(os.path.join(args.frame_dir, args.ts_dir))   # to read 120.ref, to write cum.h5
     infodir = os.path.join(tsadir, 'info')  # to read 11bad_ifg.txt, 12bad_ifg.txt
-
+    netdir = os.path.join(tsadir, 'network')
 
 def get_ifgdates():
     global ifgdates
@@ -170,17 +171,40 @@ def one_correction():
     # run one ts inversion, followed by one correction and one more ts inversion
     run_130(current_iter_unwdir, current_iter)
     run_131(current_iter)
-    run_132(current_iter_unwdir, next_iter_unwdir, current_iter)
 
-    run_130(next_iter_unwdir, next_iter)
-    run_131(next_iter)
-    run_masking(next_iter_unwdir, masking_unwdir, next_iter)
+    ifg_to_correct, good_ifg = get_good_bad_list(current_iter)
+    if len(ifg_to_correct):
+        run_133(current_iter)
+    else:
+        run_132(current_iter_unwdir, next_iter_unwdir, current_iter)
+        run_130(next_iter_unwdir, next_iter)
+        run_131(next_iter)
+        run_133(next_iter)
 
-    run_130(masking_unwdir, masking_iter)
-    run_131(masking_iter)
+        # run_131(next_iter)
+        # run_masking(next_iter_unwdir, masking_unwdir, next_iter)
+        #
+        # run_130(masking_unwdir, masking_iter)
+        # run_131(masking_iter)
+        #
+        # # compile all results into cum.h5
+        # run_133(masking_iter)
 
-    # compile all results into cum.h5
-    run_133(masking_iter)
+
+def get_good_bad_list(current_iter):
+    stats_file = os.path.join(infodir, '131resid_2pi{}.txt'.format(current_iter))
+    correction_thresh = float(io_lib.get_param_par(stats_file, 'RMS_thresh'))
+    ifg_to_correct = []
+    good_ifg = []
+    with open(stats_file) as f:
+        line = f.readline()
+        if line.startswith("2"):
+            ifg, rms = line.split()
+            if float(rms) > correction_thresh:
+                ifg_to_correct.append(ifg)
+            else:
+                good_ifg.append(ifg)
+    return ifg_to_correct, good_ifg
 
 
 def run_130(unw_dir, current_iter):

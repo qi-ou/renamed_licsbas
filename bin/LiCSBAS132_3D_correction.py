@@ -230,10 +230,9 @@ def get_para():
         print("Correction threshold = {:.2f}".format(correction_thresh))
         print("Target threshold = {:.2f}".format(target_thresh))
 
-        stats_file = os.path.join(infodir, '131resid_2pi{}.txt'.format(args.suffix))
         ifg_to_correct = []
         ### Determine type of bperp_file; old or not
-        with open(stats_file) as f:
+        with open(resid_threshold_file) as f:
             line = f.readline()
             if line.startswith("2"):
                 ifg, rms = line.split()
