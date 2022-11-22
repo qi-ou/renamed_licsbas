@@ -208,7 +208,7 @@ def get_good_bad_list(current_iter):
 
 
 def run_130(unw_dir, current_iter):
-    os.system('LiCSBAS130_sb_inv.py -c {} -d {} -t {} -m 20000 --suffix {} --inv_alg WLS --keep_incfile --nopngs --fast'.format(
+    os.system('LiCSBAS130_sb_inv.py -c {} -d {} -t {} --suffix {} --inv_alg WLS --keep_incfile --nopngs --fast'.format(
         ccdir, unw_dir, args.ts_dir, int(current_iter)))
 
 
