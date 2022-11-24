@@ -152,7 +152,7 @@ def init_args():
     parser.add_argument('-c', dest='cc_dir', default="GEOCml10GACOS", help="folder containing connected cc files")
     parser.add_argument('-d', dest='unw_dir', default="GEOCml10GACOS", help="folder containing unw input to be corrected")
     parser.add_argument('-t', dest='ts_dir', default="TS_GEOCml10GACOS", help="folder containing time series")
-    parser.add_argument('-m', dest='memory_size', default=8000, type=float, help="Max memory size for each patch in MB")
+    parser.add_argument('-m', dest='memory_size', default=1000, type=float, help="Max memory size for each patch in MB")
     parser.add_argument('-g', dest='gamma', default=0.0001, type=float, help="Gamma value for NSBAS inversion")
     parser.add_argument('--suffix', default="", type=str, help="suffix of the output")
     parser.add_argument('--inv_alg', metavar="[LS|WLS]", default="LS", help="Inversion algolism \n    LS :       NSBAS Least Square with no weight\n   WLS:       NSBAS Weighted Least Square (not well tested)\n              Weight (variance) is calculated by (1-coh**2)/(2*coh**2)")
