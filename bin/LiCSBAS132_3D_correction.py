@@ -728,10 +728,7 @@ def best_network(all_ifgs, all_resids):
     n_gap = 1
 
     while n_gap > 0:  # loosen correction and target thresholds until the network has no gap even after removing weak links
-        # ifgs = all_ifgs[np.array(all_resids) < target_thresh]
-        print(all_ifgs, all_resids)
         ifgs = [i for i, r in zip(all_ifgs, all_resids) if r < target_thresh]
-        print(ifgs)
         strong_links, weak_links = tools_lib.separate_strong_and_weak_links(ifgs)
         print("target_thresh = {}".format(target_thresh))
         print("{} ifgs are well-connected".format(len(strong_links)))
