@@ -739,6 +739,7 @@ def best_network(all_ifgs, all_resids):
         n_gap = len(ixs_inc_gap)
         print("n_gap={}".format(int(n_gap)))
         target_thresh += 0.01
+    target_thresh -= 0.01
 
     ### Plot network
     ## Read bperp data or dummy
