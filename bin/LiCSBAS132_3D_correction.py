@@ -82,6 +82,7 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import LiCSBAS_io_lib as io_lib
 import LiCSBAS_tools_lib as tools_lib
 import LiCSBAS_plot_lib as plot_lib
+import LiCSBAS_inv_lib as inv_lib
 import shutil
 import multiprocessing as multi
 
@@ -114,6 +115,7 @@ def init_args():
     parser.add_argument('--no_depeak', default=False, action='store_true', help="don't offset by residual mode before calculation (recommend depeak)")
     parser.add_argument('--correction_by_mode', default=False, action='store_true', help="perform correction by mode only")
     parser.add_argument('--correction_by_integer', default=False, action='store_true', help="perform correction by integer only")
+    parser.add_argument('--best_network', default=False, action='store_true', help="make a connected network with the best ifgs")
     args = parser.parse_args()
 
 
@@ -182,7 +184,7 @@ def set_input_output():
 
 
 def get_para():
-    global width, length, coef_r2m, correction_thresh, target_thresh, ref_x, ref_y, n_para, res_list
+    global width, length, coef_r2m, correction_thresh, target_thresh, ref_x, ref_y, n_para, res_list, resid_threshold_file
 
     # read ifg size and satellite frequency
     mlipar = os.path.join(ccdir, 'slc.mli.par')
@@ -229,6 +231,8 @@ def get_para():
 
         print("Correction threshold = {:.2f}".format(correction_thresh))
         print("Target threshold = {:.2f}".format(target_thresh))
+
+
 
 
 def perform_correction(ifg_list=None):
@@ -719,6 +723,39 @@ def correcting_by_mode(reslist):
         del con, unw, unw_corrected, res_num_2pi, res_integer, res_rms
 
 
+def best_network(all_ifgs, all_resids):
+    target_thresh = 0.2
+    n_gap = 1
+
+    while n_gap > 0:  # loosen correction and target thresholds until the network has no gap even after removing weak links
+        ifgs = all_ifgs[all_resids < target_thresh]
+        strong_links, weak_links = tools_lib.separate_strong_and_weak_links(ifgs)
+        ### Identify gaps
+        G = inv_lib.make_sb_matrix(strong_links)
+        ixs_inc_gap = np.where(G.sum(axis=0) == 0)[0]
+        n_gap = len(ixs_inc_gap)
+        print("target_thresh = {}".format(target_thresh))
+        print("{} ifgs are well-connected".format(len(strong_links)))
+        print("{} ifgs are weak links".format(len(weak_links)))
+        print("n_gap={}".format(int(n_gap)))
+        target_thresh += 0.01
+
+    ### Plot network
+    ## Read bperp data or dummy
+    imdates = tools_lib.ifgdates2imdates(ifgs)
+    bperp_file = os.path.join(ccdir, 'baselines')
+    if os.path.exists(bperp_file):
+        bperp = io_lib.read_bperp_file(bperp_file, imdates)
+    else:  # dummy
+        n_im = len(imdates)
+        bperp = np.random.random(n_im).tolist()
+
+    pngfile = os.path.join(netdir, 'network132_best_network_all{}_{:.2f}.png'.format(args.suffix, target_thresh))
+    plot_lib.plot_corrected_network(ifgs, bperp, weak_links, pngfile, plot_bad=True, label_name='Weak Links')
+    pngfile = os.path.join(netdir, 'network132_best_network_strong{}_{:.2f}.png'.format(args.suffix, target_thresh))
+    plot_lib.plot_corrected_network(ifgs, bperp, weak_links, pngfile, plot_bad=False)
+
+
 def main():
     start()
     init_args()
@@ -730,6 +767,9 @@ def main():
         plot_network_with_unw_perc(perc_list)
     elif args.correction_by_mode:
         mode_correction()
+    elif args.best_network:
+        all_ifgs, all_resids = io_lib.read_residual_file(resid_threshold_file)
+        best_network(all_ifgs, all_resids)
     else:
         correction_main()
 
