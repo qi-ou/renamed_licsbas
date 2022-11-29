@@ -259,5 +259,4 @@ def read_residual_file(resid_file):
             if l.startswith("2"):
                 ifg_list.append(l.split()[0])
                 residual_list.append(float(l.split()[1]))
-    print(ifg_list, residual_list)
     return ifg_list, residual_list
