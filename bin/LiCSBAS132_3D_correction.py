@@ -754,9 +754,9 @@ def best_network(all_ifgs, all_resids):
         bperp = np.random.random(n_im).tolist()
 
     pngfile = os.path.join(netdir, 'network132_best_network_all{}_{:.2f}.png'.format(args.suffix, target_thresh))
-    plot_lib.plot_corrected_network(ifgs, bperp, weak_links, pngfile, plot_bad=True, label_name='Weak Links')
+    plot_lib.plot_corrected_network(ifgs, bperp, weak_links, pngfile, plot_corrected=True, label_name='Weak Links')
     pngfile = os.path.join(netdir, 'network132_best_network_strong{}_{:.2f}.png'.format(args.suffix, target_thresh))
-    plot_lib.plot_corrected_network(ifgs, bperp, weak_links, pngfile, plot_bad=False)
+    plot_lib.plot_network(ifgs, bperp, weak_links, pngfile, plot_corrected=False)
 
 
 def main():
