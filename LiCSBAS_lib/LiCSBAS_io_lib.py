@@ -259,6 +259,6 @@ def read_residual_file(resid_file):
         if line[0].startswith("2"):
             line = f.readline().split()  # find lines that start with '2'
             ifg_list.append(line[0])
-            residual_list.append(line[1])
+            residual_list.append(float(line[1]))
 
     return ifg_list, residual_list
