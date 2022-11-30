@@ -160,7 +160,8 @@ def set_input_output():
         mask_png_dir = os.path.join(resdir, 'mask_png/')
         if os.path.exists(mask_png_dir): shutil.rmtree(mask_png_dir)
         Path(mask_png_dir).mkdir(parents=True, exist_ok=True)
-
+    elif args.best_network:
+        pass
     else:  # perform correction
         correct_dir = os.path.abspath(os.path.join(args.frame_dir, args.out_dir))
         if os.path.exists(correct_dir): shutil.rmtree(correct_dir)
