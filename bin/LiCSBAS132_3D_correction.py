@@ -724,6 +724,7 @@ def correcting_by_mode(reslist):
 
 
 def best_network(all_ifgs, all_resids):
+    global target_thresh
     # target_thresh = 0.2
     n_gap = 1
 
@@ -755,6 +756,13 @@ def best_network(all_ifgs, all_resids):
     plot_lib.plot_corrected_network(ifgs, bperp, weak_links, pngfile, plot_corrected=True, label_name='Weak Links')
     pngfile = os.path.join(netdir, 'network132_best_network_strong{}_{:.2f}.png'.format(args.suffix, target_thresh))
     plot_lib.plot_network(ifgs, bperp, weak_links, pngfile, plot_bad=False)
+
+    #%% save ifg lists to text files.
+    best_network_ifg_file = os.path.join(infodir, '132best_network_ifg{}_{:.2f}.txt'.format(args.suffix, target_thresh))
+    if os.path.exists(best_network_ifg_file): os.remove(best_network_ifg_file)
+    with open(best_network_ifg_file, 'w') as f:
+        for i in strong_links:
+            print('{}'.format(i), file=f)
 
 
 def main():
