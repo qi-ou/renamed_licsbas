@@ -724,7 +724,7 @@ def correcting_by_mode(reslist):
 
 
 def best_network(all_ifgs, all_resids):
-    target_thresh = 0.2
+    # target_thresh = 0.2
     n_gap = 1
 
     while n_gap > 0:  # loosen correction and target thresholds until the network has no gap even after removing weak links
